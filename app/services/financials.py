@@ -332,6 +332,7 @@ def get_financial_summary() -> Dict[str, Any]:
                 "stripe_customer_id": cid,
                 "plan": plan_name,
                 "status": sub_status,
+                # New fields
                 "period_calls": p_call_count,
                 "period_minutes": p_frac_mins,
                 "period_billed_minutes": p_billed_mins,
@@ -341,6 +342,10 @@ def get_financial_summary() -> Dict[str, Any]:
                 "base_revenue": plan_price,
                 "overage_revenue": overage_revenue,
                 "direct_cogs": t_direct_cogs,
+                # Legacy aliases for cached frontends
+                "calls": p_call_count,
+                "minutes": p_billed_mins,
+                "api_cogs": t_direct_cogs,
                 "cost_breakdown": {
                     "twilio_telephony": round(t_voice_cost + t_stream_cost + t_record_cost, 2),
                     "gemini_ai": round(t_live_cost + t_transcript_cost + t_audit_cost, 2),
@@ -408,6 +413,32 @@ def get_financial_summary() -> Dict[str, Any]:
         sales_closer_share = round(max(0, period_gross_profit * 0.30), 2)
         cold_caller_share = round(max(0, period_gross_profit * 0.20), 2)
 
+        monthly_cogs_dict = {
+            "twilio_voice": round(cycle_twilio_voice, 2),
+            "twilio_streams": round(cycle_twilio_streams, 2),
+            "twilio_recording": round(cycle_twilio_recording, 2),
+            "twilio_numbers": round(cycle_phone_numbers, 2),
+            "gemini_live": round(cycle_gemini_live, 2),
+            "gemini_transcription": round(cycle_gemini_transcription, 2),
+            "gemini_audit": round(cycle_gemini_audit, 2),
+            "phone_numbers": round(cycle_phone_numbers, 2),
+            "stripe_fees": round(cycle_stripe_fees, 2),
+            "infrastructure": base_infra,
+            "total_monthly_cogs": cycle_total_cogs,
+            "total_api_cogs": cycle_total_cogs  # legacy alias
+        }
+
+        stripe_feed_dict = {
+            "gross_collected": gross_collected,
+            "stripe_fees": stripe_fees,
+            "net_collected": net_cash_collected,
+            "total_gross_collected": gross_collected,
+            "total_stripe_fees": stripe_fees,
+            "total_net_collected": net_cash_collected,
+            "available_balance": stripe_data.get("available_balance", 0.0),
+            "recent_charges": stripe_data.get("recent_charges", [])
+        }
+
         return {
             "revenue_source": "stripe" if stripe_data.get("connected") else "database_fallback",
             "mrr": monthly_mrr,
@@ -417,24 +448,20 @@ def get_financial_summary() -> Dict[str, Any]:
             "active_tenants_count": len(active_tenants),
             "phone_numbers_count": phone_count,
             
+            # Legacy top-level fields (prevents any cached client from seeing undefined/0)
+            "total_calls": cycle_total_calls,
+            "total_minutes": cycle_total_billed_mins,
+            "avg_call_duration_seconds": avg_call_seconds,
+            "actual_costs": monthly_cogs_dict,
+            "stripe": stripe_feed_dict,
+            
             # Current Billing Period P&L (Monthly Run-Rate)
             "current_period": {
                 "calls_count": cycle_total_calls,
                 "seconds": cycle_total_seconds,
                 "fractional_minutes": round(cycle_total_seconds / 60.0, 1),
                 "billed_minutes": cycle_total_billed_mins,
-                "cogs": {
-                    "twilio_voice": round(cycle_twilio_voice, 2),
-                    "twilio_streams": round(cycle_twilio_streams, 2),
-                    "twilio_recording": round(cycle_twilio_recording, 2),
-                    "gemini_live": round(cycle_gemini_live, 2),
-                    "gemini_transcription": round(cycle_gemini_transcription, 2),
-                    "gemini_audit": round(cycle_gemini_audit, 2),
-                    "phone_numbers": round(cycle_phone_numbers, 2),
-                    "stripe_fees": round(cycle_stripe_fees, 2),
-                    "infrastructure": base_infra,
-                    "total_monthly_cogs": cycle_total_cogs
-                },
+                "cogs": monthly_cogs_dict,
                 "gross_profit": period_gross_profit,
                 "gross_margin_pct": period_gross_margin_pct
             },
@@ -458,9 +485,12 @@ def get_financial_summary() -> Dict[str, Any]:
             "unit_economics": {
                 "cost_per_minute": blended_cogs_per_minute,
                 "post_call_processing_per_call": per_call_fixed_cogs,
+                "cost_per_call": avg_cost_per_call,
                 "avg_cost_per_call": avg_cost_per_call,
                 "avg_call_duration_seconds": avg_call_seconds,
                 "avg_billed_mins_per_call": avg_billed_mins_per_call,
+                "gross_profit": period_gross_profit,
+                "gross_margin_pct": period_gross_margin_pct,
                 "monthly_gross_profit": period_gross_profit,
                 "monthly_margin_pct": period_gross_margin_pct
             },

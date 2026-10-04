@@ -775,17 +775,27 @@ async function loadFinancials() {
     if (document.getElementById('fin-arr')) document.getElementById('fin-arr').innerText = `Annual Run Rate: ${fmtMoney(data.arr)}`;
 
     const currentPeriod = data.current_period || {};
-    const cycleCogs = currentPeriod.cogs || {};
-    if (document.getElementById('fin-cogs')) document.getElementById('fin-cogs').innerText = fmtMoney(cycleCogs.total_monthly_cogs);
-    if (document.getElementById('fin-cogs-sub')) document.getElementById('fin-cogs-sub').innerText = `Twilio + Gemini + Stripe (${currentPeriod.billed_minutes || 0} billed mins)`;
+    const cycleCogs = currentPeriod.cogs || data.actual_costs || {};
+    const totalCogs = cycleCogs.total_monthly_cogs ?? cycleCogs.total_api_cogs ?? 0;
+    const billedMins = currentPeriod.billed_minutes ?? data.total_minutes ?? 0;
+    const callsCount = currentPeriod.calls_count ?? data.total_calls ?? 0;
+    const grossProfit = currentPeriod.gross_profit ?? data.unit_economics?.gross_profit ?? (data.mrr - totalCogs);
+    const marginPct = currentPeriod.gross_margin_pct ?? data.unit_economics?.gross_margin_pct ?? (data.mrr > 0 ? (grossProfit / data.mrr * 100) : 0);
 
-    if (document.getElementById('fin-gross-profit')) document.getElementById('fin-gross-profit').innerText = fmtMoney(currentPeriod.gross_profit);
-    if (document.getElementById('fin-margin-pct')) document.getElementById('fin-margin-pct').innerText = `Gross Margin: ${Number(currentPeriod.gross_margin_pct || 0).toFixed(1)}%`;
+    if (document.getElementById('fin-cogs')) document.getElementById('fin-cogs').innerText = fmtMoney(totalCogs);
+    if (document.getElementById('fin-cogs-sub')) document.getElementById('fin-cogs-sub').innerText = `Twilio + Gemini + Stripe (${billedMins} billed mins)`;
+
+    if (document.getElementById('fin-gross-profit')) document.getElementById('fin-gross-profit').innerText = fmtMoney(grossProfit);
+    if (document.getElementById('fin-margin-pct')) document.getElementById('fin-margin-pct').innerText = `Gross Margin: ${Number(marginPct || 0).toFixed(1)}%`;
 
     const unit = data.unit_economics || {};
-    if (document.getElementById('fin-cost-min')) document.getElementById('fin-cost-min').innerText = `$${Number(unit.cost_per_minute || 0).toFixed(4)} / min`;
-    if (document.getElementById('fin-cost-call')) document.getElementById('fin-cost-call').innerText = `$${Number(unit.avg_cost_per_call || 0).toFixed(3)} / call`;
-    if (document.getElementById('fin-avg-duration-sub')) document.getElementById('fin-avg-duration-sub').innerText = `Avg duration: ${Number(unit.avg_call_duration_seconds || 0).toFixed(0)}s`;
+    const costMin = unit.cost_per_minute ?? 0.0955;
+    const costCall = unit.avg_cost_per_call ?? unit.cost_per_call ?? 0;
+    const avgDuration = unit.avg_call_duration_seconds ?? data.avg_call_duration_seconds ?? 0;
+
+    if (document.getElementById('fin-cost-min')) document.getElementById('fin-cost-min').innerText = `$${Number(costMin).toFixed(4)} / min`;
+    if (document.getElementById('fin-cost-call')) document.getElementById('fin-cost-call').innerText = `$${Number(costCall).toFixed(3)} / call`;
+    if (document.getElementById('fin-avg-duration-sub')) document.getElementById('fin-avg-duration-sub').innerText = `Avg duration: ${Number(avgDuration).toFixed(0)}s`;
 
     const splits = data.profit_splits || {};
     if (document.getElementById('fin-founder-share')) {
@@ -793,8 +803,8 @@ async function loadFinancials() {
     }
 
     // Actual Database Spend (Current Billing Cycle)
-    if (document.getElementById('fin-actual-calls-count')) document.getElementById('fin-actual-calls-count').innerText = fmtInt(currentPeriod.calls_count);
-    if (document.getElementById('fin-actual-mins-count')) document.getElementById('fin-actual-mins-count').innerText = fmtInt(currentPeriod.billed_minutes);
+    if (document.getElementById('fin-actual-calls-count')) document.getElementById('fin-actual-calls-count').innerText = fmtInt(callsCount);
+    if (document.getElementById('fin-actual-mins-count')) document.getElementById('fin-actual-mins-count').innerText = fmtInt(billedMins);
     if (document.getElementById('fin-actual-phone-count')) document.getElementById('fin-actual-phone-count').innerText = data.phone_numbers_count || 2;
 
     if (document.getElementById('fin-actual-twilio-voice')) document.getElementById('fin-actual-twilio-voice').innerText = fmtMoney(cycleCogs.twilio_voice);
@@ -803,14 +813,17 @@ async function loadFinancials() {
     if (document.getElementById('fin-actual-gemini-live')) document.getElementById('fin-actual-gemini-live').innerText = fmtMoney(cycleCogs.gemini_live);
     if (document.getElementById('fin-actual-gemini-transcription')) document.getElementById('fin-actual-gemini-transcription').innerText = fmtMoney(cycleCogs.gemini_transcription);
     if (document.getElementById('fin-actual-gemini-audit')) document.getElementById('fin-actual-gemini-audit').innerText = fmtMoney(cycleCogs.gemini_audit);
-    if (document.getElementById('fin-actual-twilio-numbers')) document.getElementById('fin-actual-twilio-numbers').innerText = fmtMoney(cycleCogs.phone_numbers);
+    if (document.getElementById('fin-actual-twilio-numbers')) document.getElementById('fin-actual-twilio-numbers').innerText = fmtMoney(cycleCogs.phone_numbers || cycleCogs.twilio_numbers);
     if (document.getElementById('fin-actual-stripe-fees')) document.getElementById('fin-actual-stripe-fees').innerText = fmtMoney(cycleCogs.stripe_fees);
-    if (document.getElementById('fin-actual-total-cogs')) document.getElementById('fin-actual-total-cogs').innerText = fmtMoney(cycleCogs.total_monthly_cogs);
+    if (document.getElementById('fin-actual-total-cogs')) document.getElementById('fin-actual-total-cogs').innerText = fmtMoney(totalCogs);
 
     // Cumulative All-Time Reconciliation
     const lifetime = data.lifetime || {};
+    const allCalls = lifetime.calls_count ?? data.total_calls ?? 0;
+    const allMins = lifetime.billed_minutes ?? data.total_minutes ?? 0;
+    const allBurn = lifetime.lifetime_api_burn ?? cycleCogs.total_api_cogs ?? 0;
     if (document.getElementById('fin-lifetime-burn')) {
-      document.getElementById('fin-lifetime-burn').innerText = `${fmtMoney(lifetime.lifetime_api_burn)} (${lifetime.calls_count || 0} calls, ${lifetime.billed_minutes || 0} billed mins)`;
+      document.getElementById('fin-lifetime-burn').innerText = `${fmtMoney(allBurn)} (${allCalls} calls, ${allMins} billed mins)`;
     }
 
     // Tenant Ledger Table
@@ -823,17 +836,23 @@ async function loadFinancials() {
         tbody.innerHTML = ledger.map(t => {
           const isAct = t.status === 'active';
           const badgeClass = isAct ? 'tenant-active-badge' : 'status-tag warning';
+          const calls = t.period_calls ?? t.calls ?? 0;
+          const mins = t.period_billed_minutes ?? t.minutes ?? (t.period_minutes ? Math.ceil(t.period_minutes) : 0);
+          const directCogs = t.direct_cogs ?? t.api_cogs ?? 0;
+          const profit = t.profit ?? (t.revenue - directCogs);
+          const margin = t.margin_pct ?? (t.revenue > 0 ? ((profit / t.revenue) * 100).toFixed(1) : '0.0');
+
           return `
             <tr>
               <td style="font-weight: 600; color: #fff;">${t.company_name}</td>
               <td><span class="call-id-badge" style="font-size: 11px;">${t.plan}</span></td>
               <td><span class="${badgeClass}">${t.status || 'inactive'}</span></td>
-              <td>${fmtInt(t.period_calls || 0)}</td>
-              <td>${fmtInt(t.period_billed_minutes || 0)}m</td>
+              <td>${fmtInt(calls)}</td>
+              <td>${Number(mins || 0).toFixed(0)}m</td>
               <td style="font-weight: 700; color: #fff;">${fmtMoney(t.revenue)}</td>
-              <td style="color: #f87171; font-family: monospace;">${fmtMoney(t.direct_cogs)}</td>
-              <td style="color: ${t.profit >= 0 ? '#4ade80' : '#f87171'}; font-weight: 700;">${fmtMoney(t.profit)}</td>
-              <td style="font-weight: 700; color: #38bdf8;">${t.margin_pct}%</td>
+              <td style="color: #f87171; font-family: monospace;">${fmtMoney(directCogs)}</td>
+              <td style="color: ${profit >= 0 ? '#4ade80' : '#f87171'}; font-weight: 700;">${fmtMoney(profit)}</td>
+              <td style="font-weight: 700; color: #38bdf8;">${margin}%</td>
             </tr>
           `;
         }).join('');
@@ -841,9 +860,10 @@ async function loadFinancials() {
     }
 
     // Live Stripe Section
-    const stripeGross = lifetime.gross_collected || 0;
-    const stripeFees = lifetime.stripe_fees || 0;
-    const stripeNet = lifetime.net_cash_collected || 0;
+    const stripeObj = data.stripe || data.lifetime || {};
+    const stripeGross = stripeObj.gross_collected ?? stripeObj.total_gross_collected ?? 0;
+    const stripeFees = stripeObj.stripe_fees ?? stripeObj.total_stripe_fees ?? 0;
+    const stripeNet = stripeObj.net_collected ?? stripeObj.net_cash_collected ?? stripeObj.total_net_collected ?? 0;
 
     if (document.getElementById('fin-stripe-gross')) document.getElementById('fin-stripe-gross').innerText = fmtMoney(stripeGross);
     if (document.getElementById('fin-stripe-fees')) document.getElementById('fin-stripe-fees').innerText = fmtMoney(stripeFees);
@@ -851,7 +871,7 @@ async function loadFinancials() {
 
     const stripeTbody = document.getElementById('fin-stripe-table-body');
     if (stripeTbody) {
-      const charges = lifetime.recent_charges || [];
+      const charges = stripeObj.recent_charges ?? [];
       if (document.getElementById('fin-stripe-charge-count')) {
         document.getElementById('fin-stripe-charge-count').innerText = `${charges.length} Succeeded Charges`;
       }
