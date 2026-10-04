@@ -289,29 +289,29 @@
 
         <div class="glass-panel fin-card fin-card-cogs">
           <div class="fin-label">
-            <span>API &amp; Tech COGS</span>
+            <span>Monthly Direct COGS</span>
             <span>⚡</span>
           </div>
           <div class="fin-value" id="fin-cogs">$0.00</div>
-          <div class="fin-sub" id="fin-cogs-sub">Twilio + Gemini to date</div>
+          <div class="fin-sub" id="fin-cogs-sub">Twilio + Gemini + Stripe this cycle</div>
         </div>
 
         <div class="glass-panel fin-card fin-card-profit">
           <div class="fin-label">
-            <span>Gross Profit</span>
+            <span>Monthly Gross Profit</span>
             <span>📈</span>
           </div>
           <div class="fin-value" id="fin-gross-profit" style="color: #4ade80;">$0.00</div>
-          <div class="fin-sub" id="fin-margin-pct">Margin: 0.0%</div>
+          <div class="fin-sub" id="fin-margin-pct">Gross Margin: 0.0%</div>
         </div>
 
         <div class="glass-panel fin-card fin-card-unit">
           <div class="fin-label">
-            <span>Cost / Minute</span>
+            <span>Cost / Billed Min</span>
             <span>⏱️</span>
           </div>
           <div class="fin-value" id="fin-cost-min" style="color: #38bdf8;">$0.000</div>
-          <div class="fin-sub">Blended Voice + AI rate</div>
+          <div class="fin-sub">Blended Voice + AI + Stream</div>
         </div>
 
         <div class="glass-panel fin-card fin-card-unit">
@@ -332,14 +332,14 @@
             <span>⚙️</span> Voice AI &amp; Telephony Unit Pricing
           </h3>
           <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
-            Production API billing rates applied per minute of live phone conversation.
+            Production software service cost rates applied per minute and per call.
           </p>
 
           <div class="cost-item-row">
             <div class="cost-item-name">
               <span style="color: #06b6d4;">●</span> Twilio Voice Inbound
             </div>
-            <div class="cost-item-rate">$0.0140 / min</div>
+            <div class="cost-item-rate">$0.0140 / billed min (60s ceil)</div>
           </div>
 
           <div class="cost-item-row">
@@ -351,23 +351,44 @@
 
           <div class="cost-item-row">
             <div class="cost-item-name">
-              <span style="color: #6366f1;">●</span> Gemini Live Audio AI (Voice)
+              <span style="color: #06b6d4;">●</span> Twilio Dual-Channel Call Recording
+            </div>
+            <div class="cost-item-rate">$0.0025 / min</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #6366f1;">●</span> Gemini Live Audio AI (Voice Session)
             </div>
             <div class="cost-item-rate">$0.0750 / min</div>
           </div>
 
           <div class="cost-item-row">
             <div class="cost-item-name">
-              <span style="color: #10b981;">●</span> Gemini 3.8 Flash Log Audit
+              <span style="color: #8b5cf6;">●</span> Gemini Flash Transcription &amp; Leads
+            </div>
+            <div class="cost-item-rate">$0.0025 / call</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #10b981;">●</span> Gemini 3.8 Flash QA &amp; DB Audit
             </div>
             <div class="cost-item-rate">$0.0008 / call</div>
           </div>
 
           <div class="cost-item-row">
             <div class="cost-item-name">
-              <span style="color: #a855f7;">●</span> Twilio Phone Number Rental
+              <span style="color: #ec4899;">●</span> Dedicated Twilio Phone Line Rental
             </div>
             <div class="cost-item-rate">$1.15 / month</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #f59e0b;">●</span> Stripe Payment Processing Fee
+            </div>
+            <div class="cost-item-rate">2.9% + $0.30 / charge</div>
           </div>
 
           <div class="cost-item-row">
@@ -380,64 +401,86 @@
           <!-- Visual Distribution Bar -->
           <div class="cost-bar-container">
             <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px;">
-              <span>COGS Share Distribution:</span>
-              <span style="color: #6366f1; font-weight: 600;">Gemini Live ~79% &bull; Twilio Telephony ~20% &bull; Audit LLM ~1% &bull; Infra $0</span>
+              <span>COGS Share Distribution (per minute of voice):</span>
+              <span style="color: #6366f1; font-weight: 600;">Gemini Live ~78.5% &bull; Twilio Telephony ~21.5%</span>
             </div>
             <div class="cost-bar-track">
-              <div class="cost-bar-gemini" style="width: 79%;" title="Gemini Live Audio AI (79%)"></div>
-              <div class="cost-bar-twilio" style="width: 20%;" title="Twilio Telephony & Streams (20%)"></div>
-              <div class="cost-bar-audit" style="width: 1%;" title="Call Audit LLM (1%)"></div>
+              <div class="cost-bar-gemini" style="width: 78.5%;" title="Gemini Live Audio AI (78.5%)"></div>
+              <div class="cost-bar-twilio" style="width: 21.5%;" title="Twilio Telephony, Streams & Recording (21.5%)"></div>
             </div>
             <div class="cost-legend">
-              <span><span class="legend-dot" style="background: #6366f1;"></span>Gemini Live (79%)</span>
-              <span><span class="legend-dot" style="background: #06b6d4;"></span>Twilio Telephony (20%)</span>
-              <span><span class="legend-dot" style="background: #10b981;"></span>QA Audit LLM (1%)</span>
-              <span><span class="legend-dot" style="background: #4ade80;"></span>Supabase &amp; Cloud Run ($0 Free)</span>
+              <span><span class="legend-dot" style="background: #6366f1;"></span>Gemini Live ($0.075/m)</span>
+              <span><span class="legend-dot" style="background: #06b6d4;"></span>Twilio Telephony &amp; Streams ($0.0205/m)</span>
+              <span><span class="legend-dot" style="background: #8b5cf6;"></span>Post-Call AI ($0.0033/call)</span>
+              <span><span class="legend-dot" style="background: #f59e0b;"></span>Stripe Fee (2.9% + $0.30)</span>
             </div>
           </div>
         </div>
 
         <!-- Actual Incurred Spend to Date -->
         <div class="glass-panel cost-engine-card">
-          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
-            <span>🗄️</span> Actual Database Spend to Date
-          </h3>
-          <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
-            Aggregated from <strong><span id="fin-actual-calls-count">108</span> real calls</strong> and <strong><span id="fin-actual-mins-count">367.3</span> minutes</strong> in PostgreSQL.
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>🗄️</span> Current Billing Cycle COGS Burn
+            </h3>
+            <span class="status-tag clean" style="font-size: 10px;">Monthly Active Cycle</span>
+          </div>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 14px;">
+            Active usage from <strong><span id="fin-actual-calls-count">42</span> period calls</strong> and <strong><span id="fin-actual-mins-count">51</span> billed mins</strong>.
           </p>
 
           <div class="cost-item-row">
-            <div class="cost-item-name">Twilio Voice Inbound Total</div>
+            <div class="cost-item-name">Twilio Inbound Voice (60s ceil)</div>
             <div class="cost-item-rate" id="fin-actual-twilio-voice">$0.00</div>
           </div>
 
           <div class="cost-item-row">
-            <div class="cost-item-name">Twilio Media Streams Total</div>
+            <div class="cost-item-name">Twilio Media Streams (WebSocket)</div>
             <div class="cost-item-rate" id="fin-actual-twilio-streams">$0.00</div>
           </div>
 
           <div class="cost-item-row">
-            <div class="cost-item-name">Twilio Phone Numbers (<span id="fin-actual-phone-count">2</span> numbers)</div>
-            <div class="cost-item-rate" id="fin-actual-twilio-numbers">$0.00</div>
+            <div class="cost-item-name">Twilio Dual-Channel Call Recording</div>
+            <div class="cost-item-rate" id="fin-actual-twilio-recording">$0.00</div>
           </div>
 
           <div class="cost-item-row">
-            <div class="cost-item-name">Gemini Live Audio AI Total</div>
+            <div class="cost-item-name">Gemini Live Audio AI Session</div>
             <div class="cost-item-rate" id="fin-actual-gemini-live" style="color: #818cf8;">$0.00</div>
           </div>
 
           <div class="cost-item-row">
-            <div class="cost-item-name">Gemini Audit Agent Total</div>
+            <div class="cost-item-name">Gemini Transcription &amp; Lead Extr.</div>
+            <div class="cost-item-rate" id="fin-actual-gemini-transcription">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Gemini Flash QA &amp; DB Audit</div>
             <div class="cost-item-rate" id="fin-actual-gemini-audit" style="color: #34d399;">$0.00</div>
           </div>
 
-          <div class="cost-item-row" style="margin-top: 10px; padding-top: 14px; border-top: 2px solid rgba(255, 255, 255, 0.1);">
-            <div class="cost-item-name" style="font-size: 15px; font-weight: 700; color: #fff;">
-              Total Production Tech Burn:
+          <div class="cost-item-row">
+            <div class="cost-item-name">Dedicated Phone Numbers (<span id="fin-actual-phone-count">2</span> numbers)</div>
+            <div class="cost-item-rate" id="fin-actual-twilio-numbers">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Stripe Payment Processing Fees</div>
+            <div class="cost-item-rate" id="fin-actual-stripe-fees" style="color: #fbbf24;">$0.00</div>
+          </div>
+
+          <div class="cost-item-row" style="margin-top: 10px; padding-top: 12px; border-top: 2px solid rgba(255, 255, 255, 0.1);">
+            <div class="cost-item-name" style="font-size: 14px; font-weight: 700; color: #fff;">
+              Total Monthly Direct COGS:
             </div>
-            <div class="cost-item-rate" id="fin-actual-total-cogs" style="font-size: 18px; color: #f87171;">
+            <div class="cost-item-rate" id="fin-actual-total-cogs" style="font-size: 17px; color: #f87171; font-weight: 700;">
               $0.00
             </div>
+          </div>
+
+          <div style="margin-top: 10px; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-radius: 6px; display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; color: var(--text-muted);">
+            <span>Cumulative All-Time Call Burn to Date:</span>
+            <span id="fin-lifetime-burn" style="color: #94a3b8; font-weight: 600; font-family: monospace;">$0.00</span>
           </div>
         </div>
       </section>
@@ -595,12 +638,12 @@
                 <th>Business Name</th>
                 <th>Plan</th>
                 <th>Status</th>
-                <th>Calls Logged</th>
-                <th>Minutes Used</th>
-                <th>Monthly Price</th>
-                <th>API COGS Incurred</th>
-                <th>Net Generated</th>
-                <th>Gross Margin</th>
+                <th>Cycle Calls</th>
+                <th>Billed Mins</th>
+                <th>Monthly Rev</th>
+                <th>Direct COGS (Twilio+AI+Stripe)</th>
+                <th>Monthly Net Profit</th>
+                <th>Contribution Margin</th>
               </tr>
             </thead>
             <tbody id="fin-tenant-table-body">

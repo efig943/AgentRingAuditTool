@@ -1,3 +1,4 @@
+import math
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import psycopg2
@@ -8,19 +9,31 @@ from app.core import config
 
 logger = logging.getLogger("callAuditAgent.financials")
 
-# Pricing & Rate Constants
+# Comprehensive Software Service Cost Rates & Pricing Model
 COST_RATES = {
-    "twilio_voice_per_min": 0.0140,       # Twilio inbound voice rate
-    "twilio_streams_per_min": 0.0040,     # Twilio bidirectional media stream rate
-    "twilio_total_voice_per_min": 0.0180, # Blended Twilio voice + streaming
-    "gemini_live_per_min": 0.0750,        # Gemini Live audio in/out blended rate
-    "gemini_audit_per_call": 0.0008,      # Gemini 3.8 Flash structured audit cost per call
-    "phone_number_monthly": 1.15,         # Twilio local phone number per month
-    "base_infra_monthly": 0.00,           # Free Tier for Supabase & Cloud Run ($0/mo)
-    "supabase_tier": "free",              # Supabase Free Plan (500MB DB, 50k MAU)
-    "cloud_run_tier": "free",             # Google Cloud Run Free Tier (2M req, 180k vCPU-s)
+    # Telephony (Twilio)
+    "twilio_voice_per_min": 0.0140,         # Inbound voice (billed in 60s ceil increments)
+    "twilio_streams_per_min": 0.0040,       # Bidirectional Media Streams WebSocket (exact duration)
+    "twilio_recording_per_min": 0.0025,     # Dual-channel MP3 call recording
+    "phone_number_monthly": 1.15,           # Dedicated Twilio phone number rental per month
+    "sms_cost_per_msg": 0.0129,             # Outbound SMS followup/receipt ($0.0079 + carrier fee)
+    
+    # AI Speech & Intelligence (Google Gemini)
+    "gemini_live_per_min": 0.0750,          # Multimodal Live real-time audio WebSocket session
+    "gemini_transcription_per_call": 0.0025,# Post-call audio transcription & lead extraction (Flash)
+    "gemini_audit_per_call": 0.0008,        # Automated support QA audit & DB integrity check (Flash)
+    
+    # Payment Gateway (Stripe)
+    "stripe_fee_pct": 0.029,                # Credit card processing rate (2.9%)
+    "stripe_fee_fixed": 0.30,               # Fixed fee per transaction ($0.30)
+    
+    # Infrastructure & Hosting
+    "base_infra_monthly": 0.00,             # Supabase & Cloud Run Free Tier ($0.00/mo)
+    "supabase_tier": "free",
+    "cloud_run_tier": "free"
 }
 
+# Plan Tiers
 PLAN_TIERS = {
     "starter": {
         "name": "Starter",
@@ -41,6 +54,16 @@ PLAN_TIERS = {
         "overage_rate": 0.25,
     }
 }
+
+def calc_billed_minutes(seconds: int) -> int:
+    """
+    Calculate billable minutes according to Twilio telephony standards.
+    Twilio bills voice duration rounded UP to the nearest whole minute (60s increments).
+    A 0-second call is 0 minutes; a 1-second call is 1 billed minute.
+    """
+    if not seconds or seconds <= 0:
+        return 0
+    return math.ceil(seconds / 60.0)
 
 def fetch_stripe_metrics() -> Dict[str, Any]:
     """
@@ -159,6 +182,10 @@ def get_financial_summary() -> Dict[str, Any]:
     """
     Calculate real business financial metrics combining live Stripe payment records
     (MRR, charges, fees, balance) and PostgreSQL database records (call_logs, tenants).
+    
+    Rigorously segments:
+      - Current Billing Cycle P&L (Monthly Run-Rate: MRR vs Monthly Direct COGS)
+      - Cumulative Lifetime Cash Flow (Cash Collected vs All-Time Burn)
     """
     # 1. Fetch live Stripe metrics
     stripe_data = fetch_stripe_metrics()
@@ -168,177 +195,288 @@ def get_financial_summary() -> Dict[str, Any]:
     try:
         cur = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         
-        # 2. Aggregate call logs
-        cur.execute("""
-            SELECT 
-                count(*) as total_calls,
-                coalesce(sum(duration_seconds), 0) as total_seconds,
-                coalesce(avg(duration_seconds), 0) as avg_seconds
-            FROM call_logs;
-        """)
-        call_stats = cur.fetchone()
-        total_calls = call_stats["total_calls"]
-        total_seconds = call_stats["total_seconds"]
-        total_minutes = round(total_seconds / 60.0, 2)
-        avg_seconds = round(float(call_stats["avg_seconds"]), 1)
-        avg_minutes = round(avg_seconds / 60.0, 2)
-
-        # 3. Phone numbers count
+        # 2. Phone numbers count
         cur.execute("SELECT count(*) as count FROM phone_numbers;")
         phone_count = cur.fetchone()["count"]
 
-        # 4. Active tenants from DB
+        # 3. Active tenants from DB
         cur.execute("""
-            SELECT id, company_name, subscription_status, subscription_plan, stripe_customer_id, stripe_subscription_id, created_at 
+            SELECT id, company_name, subscription_status, subscription_plan, 
+                   stripe_customer_id, stripe_subscription_id, 
+                   current_period_start, current_period_end, created_at 
             FROM tenants 
             WHERE subscription_status = 'active';
         """)
         active_tenants = [dict(r) for r in cur.fetchall()]
 
-        # 5. Per-tenant usage breakdown
-        cur.execute("""
-            SELECT 
-                t.id, 
-                t.company_name, 
-                t.subscription_plan, 
-                t.subscription_status,
-                t.stripe_customer_id,
-                t.stripe_subscription_id,
-                count(c.id) as call_count,
-                coalesce(sum(c.duration_seconds), 0) as total_seconds
-            FROM tenants t
-            LEFT JOIN call_logs c ON t.id = c.tenant_id
-            GROUP BY t.id, t.company_name, t.subscription_plan, t.subscription_status, t.stripe_customer_id, t.stripe_subscription_id
-            HAVING count(c.id) > 0 OR t.subscription_status = 'active'
-            ORDER BY total_seconds DESC;
-        """)
-        tenant_usage_rows = [dict(r) for r in cur.fetchall()]
-
-        # Determine MRR source of truth (Stripe vs DB fallback)
-        if stripe_data.get("connected") and stripe_data.get("mrr", 0) > 0:
-            mrr = stripe_data["mrr"]
-            arr = stripe_data["arr"]
-            revenue_source = "stripe"
-        else:
-            mrr = 0.0
-            for t in active_tenants:
-                plan_key = (t.get("subscription_plan") or "growth").lower()
-                plan_info = PLAN_TIERS.get(plan_key, PLAN_TIERS["growth"])
-                mrr += plan_info["price"]
-            arr = round(mrr * 12, 2)
-            revenue_source = "database_fallback"
-
-        # Compute Actual API Costs to Date (based on real call durations)
-        twilio_voice_cost = round(total_minutes * COST_RATES["twilio_voice_per_min"], 2)
-        twilio_streams_cost = round(total_minutes * COST_RATES["twilio_streams_per_min"], 2)
-        twilio_numbers_cost = round(phone_count * COST_RATES["phone_number_monthly"], 2)
-        total_twilio_cost = round(twilio_voice_cost + twilio_streams_cost + twilio_numbers_cost, 2)
-
-        gemini_live_cost = round(total_minutes * COST_RATES["gemini_live_per_min"], 2)
-        gemini_audit_cost = round(total_calls * COST_RATES["gemini_audit_per_call"], 3)
-        total_gemini_cost = round(gemini_live_cost + gemini_audit_cost, 2)
-
-        total_api_cogs = round(total_twilio_cost + total_gemini_cost, 2)
-
-        # Unit economics
-        blended_cogs_per_minute = round(COST_RATES["twilio_total_voice_per_min"] + COST_RATES["gemini_live_per_min"], 4)
-        avg_cost_per_call = round((avg_seconds / 60.0) * blended_cogs_per_minute + COST_RATES["gemini_audit_per_call"], 4)
-
-        # Build tenant ledger reconciling with live Stripe subscriptions
+        # 4. Process each active tenant's current billing cycle and all-time usage
         tenant_ledger = []
-        for tu in tenant_usage_rows:
-            tu_mins = round(tu["total_seconds"] / 60.0, 1)
-            cid = tu.get("stripe_customer_id")
-            sid = tu.get("stripe_subscription_id")
+        monthly_mrr = 0.0
+        monthly_overage_rev = 0.0
 
-            # Match with Stripe live subscription if available
+        # Totals for Current Billing Cycle
+        cycle_total_calls = 0
+        cycle_total_seconds = 0
+        cycle_total_billed_mins = 0
+        cycle_twilio_voice = 0.0
+        cycle_twilio_streams = 0.0
+        cycle_twilio_recording = 0.0
+        cycle_gemini_live = 0.0
+        cycle_gemini_transcription = 0.0
+        cycle_gemini_audit = 0.0
+        cycle_phone_numbers = 0.0
+        cycle_stripe_fees = 0.0
+
+        # Totals for All-Time Cumulative
+        all_time_total_calls = 0
+        all_time_total_seconds = 0
+        all_time_total_billed_mins = 0
+
+        now = datetime.now()
+
+        for t in active_tenants:
+            tid = t["id"]
+            cid = t.get("stripe_customer_id")
+            sid = t.get("stripe_subscription_id")
+
+            # Determine plan and base subscription price
             stripe_sub = subs_map.get(cid) or subs_map.get(sid)
             if stripe_sub:
                 plan_name = stripe_sub["plan"]
                 plan_price = stripe_sub["amount"]
-                status = stripe_sub["status"]
+                sub_status = stripe_sub["status"]
             else:
-                plan_key = (tu["subscription_plan"] or "starter").lower()
+                plan_key = (t.get("subscription_plan") or "growth").lower()
                 plan_name = plan_key.capitalize()
-                plan_price = PLAN_TIERS.get(plan_key, {}).get("price", 49.0) if tu["subscription_status"] == "active" else 0.0
-                status = tu["subscription_status"]
+                plan_price = PLAN_TIERS.get(plan_key, PLAN_TIERS["growth"])["price"] if t["subscription_status"] == "active" else 0.0
+                sub_status = t["subscription_status"]
 
-            est_cost = round(tu_mins * blended_cogs_per_minute + tu["call_count"] * COST_RATES["gemini_audit_per_call"], 2)
-            est_profit = round(plan_price - est_cost, 2)
-            margin = round((est_profit / plan_price * 100), 1) if plan_price > 0 else 0.0
+            monthly_mrr += plan_price
+            plan_info = PLAN_TIERS.get(plan_name.lower(), PLAN_TIERS["growth"])
+
+            # Define current billing cycle window
+            p_start = t.get("current_period_start") or (now - timedelta(days=30))
+            p_end = t.get("current_period_end") or now
+
+            # Query calls for this tenant within current billing cycle
+            cur.execute("""
+                SELECT id, duration_seconds 
+                FROM call_logs 
+                WHERE tenant_id = %s AND created_at >= %s AND created_at <= %s;
+            """, (tid, p_start, p_end))
+            p_calls = cur.fetchall()
+            p_call_count = len(p_calls)
+            p_seconds = sum(c["duration_seconds"] or 0 for c in p_calls)
+            p_frac_mins = round(p_seconds / 60.0, 1)
+            p_billed_mins = sum(calc_billed_minutes(c["duration_seconds"] or 0) for c in p_calls)
+
+            # Query all-time calls for this tenant
+            cur.execute("""
+                SELECT id, duration_seconds 
+                FROM call_logs 
+                WHERE tenant_id = %s;
+            """, (tid,))
+            all_calls = cur.fetchall()
+            a_call_count = len(all_calls)
+            a_seconds = sum(c["duration_seconds"] or 0 for c in all_calls)
+            a_billed_mins = sum(calc_billed_minutes(c["duration_seconds"] or 0) for c in all_calls)
+
+            # Current Cycle Costs for this Tenant
+            t_voice_cost = round(p_billed_mins * COST_RATES["twilio_voice_per_min"], 4)
+            t_stream_cost = round(p_frac_mins * COST_RATES["twilio_streams_per_min"], 4)
+            t_record_cost = round(p_frac_mins * COST_RATES["twilio_recording_per_min"], 4)
+            t_live_cost = round(p_frac_mins * COST_RATES["gemini_live_per_min"], 4)
+            t_transcript_cost = round(p_call_count * COST_RATES["gemini_transcription_per_call"], 4)
+            t_audit_cost = round(p_call_count * COST_RATES["gemini_audit_per_call"], 4)
+            t_phone_cost = COST_RATES["phone_number_monthly"] # $1.15 dedicated number
+            t_stripe_fee = round(plan_price * COST_RATES["stripe_fee_pct"] + COST_RATES["stripe_fee_fixed"], 2) if plan_price > 0 else 0.0
+
+            t_direct_cogs = round(
+                t_voice_cost + t_stream_cost + t_record_cost + 
+                t_live_cost + t_transcript_cost + t_audit_cost + 
+                t_phone_cost + t_stripe_fee, 
+                2
+            )
+
+            # Overage calculation
+            included_mins = plan_info.get("included_minutes", 450)
+            overage_mins = max(0, p_billed_mins - included_mins)
+            overage_revenue = round(overage_mins * plan_info.get("overage_rate", 0.30), 2)
+            monthly_overage_rev += overage_revenue
+            t_total_revenue = round(plan_price + overage_revenue, 2)
+
+            t_net_profit = round(t_total_revenue - t_direct_cogs, 2)
+            t_margin_pct = round((t_net_profit / t_total_revenue * 100), 1) if t_total_revenue > 0 else 0.0
+
+            # Accumulate cycle totals
+            cycle_total_calls += p_call_count
+            cycle_total_seconds += p_seconds
+            cycle_total_billed_mins += p_billed_mins
+            cycle_twilio_voice += t_voice_cost
+            cycle_twilio_streams += t_stream_cost
+            cycle_twilio_recording += t_record_cost
+            cycle_gemini_live += t_live_cost
+            cycle_gemini_transcription += t_transcript_cost
+            cycle_gemini_audit += t_audit_cost
+            cycle_phone_numbers += t_phone_cost
+            cycle_stripe_fees += t_stripe_fee
+
+            # Accumulate all-time totals
+            all_time_total_calls += a_call_count
+            all_time_total_seconds += a_seconds
+            all_time_total_billed_mins += a_billed_mins
 
             tenant_ledger.append({
-                "tenant_id": tu["id"],
-                "company_name": tu["company_name"] or f"Tenant #{tu['id']}",
+                "tenant_id": tid,
+                "company_name": t["company_name"] or f"Tenant #{tid}",
                 "stripe_customer_id": cid,
                 "plan": plan_name,
-                "status": status,
-                "calls": tu["call_count"],
-                "minutes": tu_mins,
-                "revenue": plan_price,
-                "api_cogs": est_cost,
-                "profit": est_profit,
-                "margin_pct": margin
+                "status": sub_status,
+                "period_calls": p_call_count,
+                "period_minutes": p_frac_mins,
+                "period_billed_minutes": p_billed_mins,
+                "all_time_calls": a_call_count,
+                "all_time_minutes": round(a_seconds / 60.0, 1),
+                "revenue": t_total_revenue,
+                "base_revenue": plan_price,
+                "overage_revenue": overage_revenue,
+                "direct_cogs": t_direct_cogs,
+                "cost_breakdown": {
+                    "twilio_telephony": round(t_voice_cost + t_stream_cost + t_record_cost, 2),
+                    "gemini_ai": round(t_live_cost + t_transcript_cost + t_audit_cost, 2),
+                    "phone_number": t_phone_cost,
+                    "stripe_fee": t_stripe_fee
+                },
+                "profit": t_net_profit,
+                "margin_pct": t_margin_pct
             })
 
-        # Profit & Margins
-        gross_profit = round(mrr - total_api_cogs, 2)
-        gross_margin_pct = round((gross_profit / mrr * 100), 1) if mrr > 0 else 0.0
+        # Final Monthly Period P&L
+        period_revenue = round(monthly_mrr + monthly_overage_rev, 2)
+        base_infra = COST_RATES["base_infra_monthly"]
+        
+        cycle_telephony = round(cycle_twilio_voice + cycle_twilio_streams + cycle_twilio_recording, 2)
+        cycle_gemini_ai = round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2)
+        cycle_total_cogs = round(cycle_telephony + cycle_gemini_ai + cycle_phone_numbers + cycle_stripe_fees + base_infra, 2)
 
-        # Cash collected vs API spend
+        period_gross_profit = round(period_revenue - cycle_total_cogs, 2)
+        period_gross_margin_pct = round((period_gross_profit / period_revenue * 100), 1) if period_revenue > 0 else 0.0
+
+        # All-Time Cumulative Burn
+        all_time_frac_mins = round(all_time_total_seconds / 60.0, 1)
+        all_time_voice = round(all_time_total_billed_mins * COST_RATES["twilio_voice_per_min"], 2)
+        all_time_streams = round(all_time_frac_mins * COST_RATES["twilio_streams_per_min"], 2)
+        all_time_recording = round(all_time_frac_mins * COST_RATES["twilio_recording_per_min"], 2)
+        all_time_live = round(all_time_frac_mins * COST_RATES["gemini_live_per_min"], 2)
+        all_time_transcription = round(all_time_total_calls * COST_RATES["gemini_transcription_per_call"], 2)
+        all_time_audit = round(all_time_total_calls * COST_RATES["gemini_audit_per_call"], 3)
+        all_time_numbers = round(phone_count * COST_RATES["phone_number_monthly"] * 4.0, 2) # approx 4 active tenant months
+        
+        all_time_api_burn = round(
+            all_time_voice + all_time_streams + all_time_recording + 
+            all_time_live + all_time_transcription + all_time_audit + all_time_numbers, 
+            2
+        )
+
+        # Lifetime Cash Reconciliation
         gross_collected = stripe_data.get("total_gross_collected", 0.0)
         stripe_fees = stripe_data.get("total_stripe_fees", 0.0)
         net_cash_collected = stripe_data.get("total_net_collected", 0.0)
-        net_cash_profit = round(net_cash_collected - total_api_cogs, 2)
+        lifetime_net_profit = round(net_cash_collected - all_time_api_burn, 2)
 
-        # Profit share breakdown (50% Founder, 30% Closer, 20% Cold Caller)
-        founder_share = round(max(0, gross_profit * 0.50), 2)
-        sales_closer_share = round(max(0, gross_profit * 0.30), 2)
-        cold_caller_share = round(max(0, gross_profit * 0.20), 2)
+        # Unit Economics (Blended)
+        # Variable rate per minute = Voice ($0.0140) + Streams ($0.0040) + Recording ($0.0025) + Gemini Live ($0.0750) = $0.0955
+        blended_cogs_per_minute = round(
+            COST_RATES["twilio_voice_per_min"] + 
+            COST_RATES["twilio_streams_per_min"] + 
+            COST_RATES["twilio_recording_per_min"] + 
+            COST_RATES["gemini_live_per_min"], 
+            4
+        )
+        # Per call processing = Post-call transcription ($0.0025) + QA audit ($0.0008) = $0.0033
+        per_call_fixed_cogs = round(
+            COST_RATES["gemini_transcription_per_call"] + 
+            COST_RATES["gemini_audit_per_call"], 
+            4
+        )
+        avg_call_seconds = round(all_time_total_seconds / float(all_time_total_calls), 1) if all_time_total_calls > 0 else 0.0
+        avg_billed_mins_per_call = round(all_time_total_billed_mins / float(all_time_total_calls), 2) if all_time_total_calls > 0 else 0.0
+        avg_cost_per_call = round((avg_billed_mins_per_call * blended_cogs_per_minute) + per_call_fixed_cogs, 4)
+
+        # Profit Splits on Monthly Gross Profit (50% Founder, 30% Closer, 20% Cold Caller)
+        founder_share = round(max(0, period_gross_profit * 0.50), 2)
+        sales_closer_share = round(max(0, period_gross_profit * 0.30), 2)
+        cold_caller_share = round(max(0, period_gross_profit * 0.20), 2)
 
         return {
-            "revenue_source": revenue_source,
-            "mrr": mrr,
-            "arr": arr,
-            "stripe": {
-                "connected": stripe_data.get("connected", False),
+            "revenue_source": "stripe" if stripe_data.get("connected") else "database_fallback",
+            "mrr": monthly_mrr,
+            "arr": round(monthly_mrr * 12, 2),
+            "period_revenue": period_revenue,
+            "period_overage_revenue": monthly_overage_rev,
+            "active_tenants_count": len(active_tenants),
+            "phone_numbers_count": phone_count,
+            
+            # Current Billing Period P&L (Monthly Run-Rate)
+            "current_period": {
+                "calls_count": cycle_total_calls,
+                "seconds": cycle_total_seconds,
+                "fractional_minutes": round(cycle_total_seconds / 60.0, 1),
+                "billed_minutes": cycle_total_billed_mins,
+                "cogs": {
+                    "twilio_voice": round(cycle_twilio_voice, 2),
+                    "twilio_streams": round(cycle_twilio_streams, 2),
+                    "twilio_recording": round(cycle_twilio_recording, 2),
+                    "gemini_live": round(cycle_gemini_live, 2),
+                    "gemini_transcription": round(cycle_gemini_transcription, 2),
+                    "gemini_audit": round(cycle_gemini_audit, 2),
+                    "phone_numbers": round(cycle_phone_numbers, 2),
+                    "stripe_fees": round(cycle_stripe_fees, 2),
+                    "infrastructure": base_infra,
+                    "total_monthly_cogs": cycle_total_cogs
+                },
+                "gross_profit": period_gross_profit,
+                "gross_margin_pct": period_gross_margin_pct
+            },
+
+            # Cumulative Lifetime Cash Flow
+            "lifetime": {
+                "calls_count": all_time_total_calls,
+                "seconds": all_time_total_seconds,
+                "fractional_minutes": all_time_frac_mins,
+                "billed_minutes": all_time_total_billed_mins,
                 "gross_collected": gross_collected,
                 "stripe_fees": stripe_fees,
-                "net_collected": net_cash_collected,
-                "net_cash_profit": net_cash_profit,
+                "net_cash_collected": net_cash_collected,
+                "lifetime_api_burn": all_time_api_burn,
+                "lifetime_net_profit": lifetime_net_profit,
                 "available_balance": stripe_data.get("available_balance", 0.0),
-                "active_subscriptions_count": stripe_data.get("active_subscriptions_count", 0),
                 "recent_charges": stripe_data.get("recent_charges", [])
             },
-            "total_calls": total_calls,
-            "total_minutes": total_minutes,
-            "avg_call_duration_seconds": avg_seconds,
-            "avg_call_duration_minutes": avg_minutes,
-            "active_tenants_count": stripe_data.get("active_subscriptions_count") or len(active_tenants),
-            "phone_numbers_count": phone_count,
-            "rates": COST_RATES,
-            "plans": PLAN_TIERS,
-            "actual_costs": {
-                "twilio_voice": twilio_voice_cost,
-                "twilio_streams": twilio_streams_cost,
-                "twilio_numbers": twilio_numbers_cost,
-                "twilio_total": total_twilio_cost,
-                "gemini_live": gemini_live_cost,
-                "gemini_audit": gemini_audit_cost,
-                "gemini_total": total_gemini_cost,
-                "total_api_cogs": total_api_cogs
-            },
+
+            # Unit Economics & Rates
             "unit_economics": {
                 "cost_per_minute": blended_cogs_per_minute,
-                "cost_per_call": avg_cost_per_call,
-                "gross_profit": gross_profit,
-                "gross_margin_pct": gross_margin_pct
+                "post_call_processing_per_call": per_call_fixed_cogs,
+                "avg_cost_per_call": avg_cost_per_call,
+                "avg_call_duration_seconds": avg_call_seconds,
+                "avg_billed_mins_per_call": avg_billed_mins_per_call,
+                "monthly_gross_profit": period_gross_profit,
+                "monthly_margin_pct": period_gross_margin_pct
             },
+            
+            # Rate Engine
+            "rates": COST_RATES,
+            "plans": PLAN_TIERS,
+            
+            # Team Commission Splits (Monthly P&L)
             "profit_splits": {
                 "founder_share_50": founder_share,
                 "sales_closer_30": sales_closer_share,
                 "cold_caller_20": cold_caller_share
             },
+            
+            # Per-Tenant Performance Ledger
             "tenant_ledger": tenant_ledger
         }
     finally:
@@ -352,40 +490,59 @@ def simulate_projections(
     infra_tier: str = "free"
 ) -> Dict[str, Any]:
     """
-    Interactive SaaS business financial simulator.
-    Models revenues, API costs, profits, and commissions based on growth targets.
+    Interactive SaaS business financial simulator with comprehensive COGS:
+    Includes Twilio Voice, Streams, Recording, Gemini Live, Transcription,
+    Audit QA, Phone Numbers, Stripe Fees, and Infrastructure.
     """
     plan = PLAN_TIERS.get(plan_tier.lower(), PLAN_TIERS["growth"])
     monthly_plan_price = plan["price"]
     included_mins_per_tenant = plan["included_minutes"]
     overage_rate = plan["overage_rate"]
 
-    # Call & Usage Projections (30 days/month)
+    # Usage Projections (30 days/month)
     total_calls_month = tenants_count * calls_per_day_per_tenant * 30
     total_minutes_month = round(total_calls_month * avg_call_minutes, 1)
+    # Twilio bills in whole-minute increments; with average call duration, billed minutes is slightly higher
+    billed_minutes_month = round(total_calls_month * math.ceil(avg_call_minutes), 1)
 
     # Subscription Revenue
     base_mrr = tenants_count * monthly_plan_price
 
     # Overage Revenue
     total_included_minutes = tenants_count * included_mins_per_tenant
-    overage_minutes = max(0.0, total_minutes_month - total_included_minutes)
+    overage_minutes = max(0.0, billed_minutes_month - total_included_minutes)
     overage_revenue = round(overage_minutes * overage_rate, 2)
 
     total_mrr = round(base_mrr + overage_revenue, 2)
     total_arr = round(total_mrr * 12, 2)
 
-    # API & COGS Calculation
-    twilio_cost = round(total_minutes_month * COST_RATES["twilio_total_voice_per_min"] + tenants_count * COST_RATES["phone_number_monthly"], 2)
-    gemini_live_cost = round(total_minutes_month * COST_RATES["gemini_live_per_min"], 2)
-    gemini_audit_cost = round(total_calls_month * COST_RATES["gemini_audit_per_call"], 2)
+    # Comprehensive COGS Calculation
+    # 1. Telephony: Voice + Media Streams + Recording
+    twilio_voice = round(billed_minutes_month * COST_RATES["twilio_voice_per_min"], 2)
+    twilio_streams = round(total_minutes_month * COST_RATES["twilio_streams_per_min"], 2)
+    twilio_recording = round(total_minutes_month * COST_RATES["twilio_recording_per_min"], 2)
+    twilio_numbers = round(tenants_count * COST_RATES["phone_number_monthly"], 2)
+    total_twilio_cost = round(twilio_voice + twilio_streams + twilio_recording + twilio_numbers, 2)
+
+    # 2. AI: Gemini Live + Transcription + Audit
+    gemini_live = round(total_minutes_month * COST_RATES["gemini_live_per_min"], 2)
+    gemini_transcription = round(total_calls_month * COST_RATES["gemini_transcription_per_call"], 2)
+    gemini_audit = round(total_calls_month * COST_RATES["gemini_audit_per_call"], 2)
+    total_gemini_cost = round(gemini_live + gemini_transcription + gemini_audit, 2)
+
+    # 3. Payment Gateway: Stripe merchant fees (2.9% + $0.30 per subscriber)
+    stripe_fee_per_sub = round(monthly_plan_price * COST_RATES["stripe_fee_pct"] + COST_RATES["stripe_fee_fixed"], 2)
+    total_stripe_fees = round(tenants_count * stripe_fee_per_sub, 2)
+
+    # 4. Infrastructure
     infra_cost = 0.00 if str(infra_tier).lower() == "free" else 25.00
 
-    total_cogs = round(twilio_cost + gemini_live_cost + gemini_audit_cost + infra_cost, 2)
+    # Total COGS
+    total_cogs = round(total_twilio_cost + total_gemini_cost + total_stripe_fees + infra_cost, 2)
     gross_profit = round(total_mrr - total_cogs, 2)
     margin_pct = round((gross_profit / total_mrr * 100), 1) if total_mrr > 0 else 0.0
 
-    # Team Split (50/30/20)
+    # Team Split (50% Founder, 30% Closer, 20% Cold Caller)
     founder_payout = round(max(0, gross_profit * 0.50), 2)
     sales_closer_payout = round(max(0, gross_profit * 0.30), 2)
     cold_caller_payout = round(max(0, gross_profit * 0.20), 2)
@@ -400,6 +557,7 @@ def simulate_projections(
         "volume": {
             "monthly_calls": total_calls_month,
             "monthly_minutes": total_minutes_month,
+            "billed_minutes": billed_minutes_month,
             "overage_minutes": overage_minutes
         },
         "revenue": {
@@ -409,9 +567,16 @@ def simulate_projections(
             "total_arr": total_arr
         },
         "costs": {
-            "twilio_telephony": twilio_cost,
-            "gemini_live_voice": gemini_live_cost,
-            "gemini_audit_qa": gemini_audit_cost,
+            "twilio_voice": twilio_voice,
+            "twilio_streams": twilio_streams,
+            "twilio_recording": twilio_recording,
+            "twilio_numbers": twilio_numbers,
+            "total_twilio": total_twilio_cost,
+            "gemini_live": gemini_live,
+            "gemini_transcription": gemini_transcription,
+            "gemini_audit": gemini_audit,
+            "total_gemini": total_gemini_cost,
+            "stripe_fees": total_stripe_fees,
             "infrastructure": infra_cost,
             "total_cogs": total_cogs
         },
