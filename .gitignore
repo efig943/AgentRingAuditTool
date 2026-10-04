@@ -1,0 +1,23 @@
+# Environment variables
+.env
+*.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Local SQLite Database
+audits.db
+
+# OS Artifacts
+.DS_Store
+Thumbs.db
+
+# Scratch and database backups
+scratch/
+scripts/backups/

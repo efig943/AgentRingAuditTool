@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CallAudit Pro - Production Support Voice AI Auditor</title>
+  <meta name="description" content="Production support automated call log auditor and anomaly detector for voice receptionist systems. Identifies angry customers, conversational failures, and database discrepancies.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Top Header -->
+    <header class="top-header glass-panel">
+      <div class="brand-section">
+        <div class="brand-icon">🎙️</div>
+        <div>
+          <div class="brand-title">
+            CallAudit Pro
+            <span class="brand-badge">Production Support</span>
+          </div>
+          <div class="brand-subtitle">Voice AI Receptionist &bull; Automated Log & Database Integrity Auditor</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Live System Status Indicator -->
+        <div id="system-status-indicator" class="system-status-pill all-green">
+          <span class="status-dot green"></span>
+          <span id="system-status-text">All Systems Nominal</span>
+        </div>
+
+        <!-- Background Daemon Status -->
+        <div class="daemon-pill" title="Background worker periodically scans new calls and sends alert emails on issues">
+          <span>Daemon: <strong id="daemon-status-text" style="color: #4ade80;">Active</strong></span>
+          <button id="toggle-daemon-btn" class="daemon-toggle-btn" title="Toggle background monitoring">Pause</button>
+        </div>
+
+        <!-- Quick Email Test Button -->
+        <button id="btn-test-email" class="btn btn-secondary btn-sm" title="Send a verification test email to ethan.figueredo943@gmail.com">
+          ✉️ Test Email
+        </button>
+
+        <!-- Refresh Button -->
+        <button id="btn-refresh" class="btn btn-secondary btn-sm" title="Refresh dashboard data">
+          🔄 Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Navigation Tabs (Audit vs Financials) -->
+    <div class="main-nav-container">
+      <div class="main-nav-tabs">
+        <button id="nav-btn-audit" class="main-nav-btn active">
+          <span>🎙️</span> Call Audit &amp; Quality
+        </button>
+        <button id="nav-btn-financials" class="main-nav-btn">
+          <span>💰</span> Financials &amp; Unit Economics
+        </button>
+      </div>
+    </div>
+
+    <!-- View Container 1: Call Audit Logs -->
+    <div id="view-audit">
+      <!-- Metrics Row -->
+      <section class="metrics-grid">
+        <div class="metric-card glass-panel">
+          <div class="metric-header">
+            <span class="metric-title">Total Audited</span>
+            <span class="metric-icon">📊</span>
+          </div>
+        <div class="metric-value" id="stat-total-audited">0</div>
+        <div class="metric-sub" id="stat-last-audit-sub">Last scan: Never</div>
+      </div>
+
+      <div class="metric-card glass-panel clean">
+        <div class="metric-header">
+          <span class="metric-title">Clean &amp; Healthy</span>
+          <span class="metric-icon">🟢</span>
+        </div>
+        <div class="metric-value" id="stat-clean-count">0</div>
+        <div class="metric-sub" id="stat-clean-percent">100% nominal</div>
+      </div>
+
+      <div class="metric-card glass-panel critical">
+        <div class="metric-header">
+          <span class="metric-title">Issues Flagged</span>
+          <span class="metric-icon">🚨</span>
+        </div>
+        <div class="metric-value" id="stat-issues-count">0</div>
+        <div class="metric-sub" id="stat-unresolved-sub">0 unresolved</div>
+      </div>
+
+      <div class="metric-card glass-panel">
+        <div class="metric-header">
+          <span class="metric-title">Angry Customers</span>
+          <span class="metric-icon">😡</span>
+        </div>
+        <div class="metric-value" id="stat-mad-count" style="color: #f87171;">0</div>
+        <div class="metric-sub">Customer friction / rage</div>
+      </div>
+
+      <div class="metric-card glass-panel warning">
+        <div class="metric-header">
+          <span class="metric-title">DB Inconsistencies</span>
+          <span class="metric-icon">🗄️</span>
+        </div>
+        <div class="metric-value" id="stat-db-count">0</div>
+        <div class="metric-sub">Missing / wrong records</div>
+      </div>
+
+      <div class="metric-card glass-panel">
+        <div class="metric-header">
+          <span class="metric-title">Alerts Dispatched</span>
+          <span class="metric-icon">📧</span>
+        </div>
+        <div class="metric-value" id="stat-emailed-count" style="color: #60a5fa;">0</div>
+        <div class="metric-sub">to ethan.figueredo943@gmail.com</div>
+      </div>
+    </section>
+
+    <!-- Hero Audit Trigger Bar -->
+    <section class="action-hero glass-panel">
+      <div class="hero-left">
+        <h2>
+          <span>⚡</span> Audit Call Logs
+        </h2>
+        <p>Run Gemini 3.8 Flash production support analysis to verify caller sentiment, audio interaction flows, and database record synchronization.</p>
+      </div>
+
+      <div class="hero-actions">
+        <select id="audit-time-range" class="input-control" style="background: rgba(0,0,0,0.35); border-color: rgba(99, 102, 241, 0.4); font-weight: 600; padding: 10px 14px; font-size: 13px;">
+          <option value="day" selected>📅 Today / Past 24h (Daily Run)</option>
+          <option value="week">🗓️ Past Week (Last 7 Days)</option>
+          <option value="month">🗓️ Past Month (Last 30 Days)</option>
+          <option value="year">📆 Past Year</option>
+          <option value="all">⚡ Deep Analysis (Everything / All Time)</option>
+        </select>
+        <button id="btn-trigger-audit" class="btn btn-primary" title="Audit calls in selected time range">
+          <span>✨</span> Run Call Analysis
+        </button>
+        <button id="btn-force-audit" class="btn btn-secondary" title="Deep re-audit all calls in this range with Gemini (re-evaluates already audited calls)">
+          🔄 Deep Re-Audit
+        </button>
+      </div>
+
+      <!-- Animated Progress Tracker -->
+      <div id="scan-progress" class="scan-progress-container">
+        <div class="progress-track">
+          <div class="progress-bar-fill"></div>
+        </div>
+        <div class="progress-status-text">
+          <span>⚙️</span>
+          <span id="progress-status-label">Auditing calls with Gemini 3.8 Flash and verifying database records...</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Celebration All Green Banner (Conditionally Rendered) -->
+    <div id="all-green-banner" class="all-green-banner" style="display: none;">
+      <div class="all-green-icon-box">🛡️</div>
+      <div class="all-green-content">
+        <h3>ALL SYSTEMS NOMINAL &mdash; ZERO ANOMALIES DETECTED</h3>
+        <p>Every audited customer conversation has verified positive or neutral sentiment, seamless conversational flow, and 100% database record fidelity across appointments and leads.</p>
+      </div>
+    </div>
+
+    <!-- Filter & Sifting Toolbar -->
+    <section class="toolbar-section glass-panel">
+      <!-- Top Row: Status Tabs + Search -->
+      <div class="toolbar-top-row">
+        <!-- Status Tabs -->
+        <div class="filter-tabs" id="status-tabs">
+          <button class="tab-btn active" data-filter="all">
+            All Audited Calls
+          </button>
+          <button class="tab-btn" data-filter="issues">
+            🚨 Issues Requiring Attention
+            <span class="tab-badge" id="tab-issues-badge" style="display: none;">0</span>
+          </button>
+          <button class="tab-btn" data-filter="clean">
+            🟢 Clean Calls
+          </button>
+          <button class="tab-btn" data-filter="unaudited">
+            ⏳ Unaudited Logs
+          </button>
+        </div>
+
+        <!-- Search Box -->
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input type="text" id="search-input" class="input-control search-input" placeholder="Search phone, Call SID, or issue keyword...">
+        </div>
+      </div>
+
+      <!-- Second Row: Date & Time Filters -->
+      <div class="filter-row">
+        <div class="filter-group">
+          <span class="filter-label">Time Window:</span>
+          <button class="date-preset-btn active" data-preset="all">All Time</button>
+          <button class="date-preset-btn" data-preset="today">Today</button>
+          <button class="date-preset-btn" data-preset="yesterday">Yesterday</button>
+          <button class="date-preset-btn" data-preset="7days">Last 7 Days</button>
+          <button class="date-preset-btn" data-preset="30days">Last 30 Days</button>
+        </div>
+
+        <div class="filter-group" style="margin-left: auto;">
+          <span class="filter-label">From:</span>
+          <input type="datetime-local" id="filter-start-date" class="input-control" style="font-size: 12px; padding: 5px 8px;">
+          <span class="filter-label">To:</span>
+          <input type="datetime-local" id="filter-end-date" class="input-control" style="font-size: 12px; padding: 5px 8px;">
+          <button id="btn-apply-date-filter" class="btn btn-secondary btn-sm">Apply</button>
+          <button id="btn-clear-date-filter" class="btn btn-secondary btn-sm" title="Clear date filter">Clear</button>
+        </div>
+      </div>
+
+      <!-- Third Row: Quick Category Filter Chips -->
+      <div class="chips-row">
+        <span class="filter-label" style="align-self: center;">Quick Flags:</span>
+        <button class="chip-btn mad" data-chip="customer_mad">
+          <span>😡</span> Angry Customers
+        </button>
+        <button class="chip-btn db" data-chip="db_discrepancy">
+          <span>🗄️</span> Database Mismatch
+        </button>
+        <button class="chip-btn weird" data-chip="weird_interaction">
+          <span>🤖</span> AI Loops / Weird Flow
+        </button>
+      </div>
+    </section>
+
+    <!-- Calls / Incidents Container -->
+    <main id="incidents-list" class="incidents-container">
+      <!-- Call cards dynamically rendered by app.js -->
+      <div class="empty-state glass-panel">
+        <div class="empty-icon">⏳</div>
+        <div class="empty-title">Loading Call Audits...</div>
+        <div class="empty-sub">Connecting to local database and retrieving audit logs.</div>
+      </div>
+    </main>
+    </div> <!-- End of view-audit -->
+
+    <!-- View Container 2: Financials & Business Analytics -->
+    <div id="view-financials" class="financials-container" style="display: none;">
+      
+      <!-- Live Stripe Status Banner -->
+      <div class="stripe-sync-banner glass-panel" style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; border-left: 4px solid #6366f1; background: rgba(99, 102, 241, 0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <span style="font-size: 24px;">💳</span>
+          <div>
+            <div style="font-size: 14px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>Revenue &amp; Payouts: Live Stripe Connected</span>
+              <span class="status-tag clean" style="font-size: 10.5px; padding: 2px 8px;">● Live Stripe API Synced</span>
+            </div>
+            <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              Revenue calculated directly from real Stripe subscriptions, customer charges, and merchant processing fees.
+            </div>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 24px; text-align: right;">
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Gross Collected</div>
+            <div style="font-size: 16px; font-weight: 700; color: #4ade80;" id="fin-stripe-gross">$0.00</div>
+          </div>
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Stripe Fees</div>
+            <div style="font-size: 16px; font-weight: 700; color: #f87171;" id="fin-stripe-fees">$0.00</div>
+          </div>
+          <div>
+            <div style="font-size: 10.5px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Net Cash in Stripe</div>
+            <div style="font-size: 16px; font-weight: 700; color: #38bdf8;" id="fin-stripe-net">$0.00</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Financial KPI Grid -->
+      <section class="fin-kpi-grid">
+        <div class="glass-panel fin-card fin-card-mrr">
+          <div class="fin-label">
+            <span>Active MRR</span>
+            <span>💳</span>
+          </div>
+          <div class="fin-value" id="fin-mrr">$0.00</div>
+          <div class="fin-sub" id="fin-arr">Annual Run Rate: $0.00</div>
+        </div>
+
+        <div class="glass-panel fin-card fin-card-cogs">
+          <div class="fin-label">
+            <span>API &amp; Tech COGS</span>
+            <span>⚡</span>
+          </div>
+          <div class="fin-value" id="fin-cogs">$0.00</div>
+          <div class="fin-sub" id="fin-cogs-sub">Twilio + Gemini to date</div>
+        </div>
+
+        <div class="glass-panel fin-card fin-card-profit">
+          <div class="fin-label">
+            <span>Gross Profit</span>
+            <span>📈</span>
+          </div>
+          <div class="fin-value" id="fin-gross-profit" style="color: #4ade80;">$0.00</div>
+          <div class="fin-sub" id="fin-margin-pct">Margin: 0.0%</div>
+        </div>
+
+        <div class="glass-panel fin-card fin-card-unit">
+          <div class="fin-label">
+            <span>Cost / Minute</span>
+            <span>⏱️</span>
+          </div>
+          <div class="fin-value" id="fin-cost-min" style="color: #38bdf8;">$0.000</div>
+          <div class="fin-sub">Blended Voice + AI rate</div>
+        </div>
+
+        <div class="glass-panel fin-card fin-card-unit">
+          <div class="fin-label">
+            <span>Avg Cost / Call</span>
+            <span>📞</span>
+          </div>
+          <div class="fin-value" id="fin-cost-call" style="color: #a5b4fc;">$0.000</div>
+          <div class="fin-sub" id="fin-avg-duration-sub">Avg duration: 0.0s</div>
+        </div>
+      </section>
+
+      <!-- Cost Breakdown Engine & Actual Usage -->
+      <section class="fin-two-col">
+        <!-- Rate Engine -->
+        <div class="glass-panel cost-engine-card">
+          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <span>⚙️</span> Voice AI &amp; Telephony Unit Pricing
+          </h3>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+            Production API billing rates applied per minute of live phone conversation.
+          </p>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #06b6d4;">●</span> Twilio Voice Inbound
+            </div>
+            <div class="cost-item-rate">$0.0140 / min</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #06b6d4;">●</span> Twilio Media Stream (WebSocket)
+            </div>
+            <div class="cost-item-rate">$0.0040 / min</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #6366f1;">●</span> Gemini Live Audio AI (Voice)
+            </div>
+            <div class="cost-item-rate">$0.0750 / min</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #10b981;">●</span> Gemini 3.8 Flash Log Audit
+            </div>
+            <div class="cost-item-rate">$0.0008 / call</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #a855f7;">●</span> Twilio Phone Number Rental
+            </div>
+            <div class="cost-item-rate">$1.15 / month</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">
+              <span style="color: #10b981;">●</span> Cloud Run &amp; Supabase (Free Tier Active)
+            </div>
+            <div class="cost-item-rate" style="color: #4ade80; font-weight: 700;">$0.00 / month</div>
+          </div>
+
+          <!-- Visual Distribution Bar -->
+          <div class="cost-bar-container">
+            <div style="display: flex; justify-content: space-between; font-size: 11.5px; color: var(--text-muted); margin-bottom: 6px;">
+              <span>COGS Share Distribution:</span>
+              <span style="color: #6366f1; font-weight: 600;">Gemini Live ~79% &bull; Twilio Telephony ~20% &bull; Audit LLM ~1% &bull; Infra $0</span>
+            </div>
+            <div class="cost-bar-track">
+              <div class="cost-bar-gemini" style="width: 79%;" title="Gemini Live Audio AI (79%)"></div>
+              <div class="cost-bar-twilio" style="width: 20%;" title="Twilio Telephony & Streams (20%)"></div>
+              <div class="cost-bar-audit" style="width: 1%;" title="Call Audit LLM (1%)"></div>
+            </div>
+            <div class="cost-legend">
+              <span><span class="legend-dot" style="background: #6366f1;"></span>Gemini Live (79%)</span>
+              <span><span class="legend-dot" style="background: #06b6d4;"></span>Twilio Telephony (20%)</span>
+              <span><span class="legend-dot" style="background: #10b981;"></span>QA Audit LLM (1%)</span>
+              <span><span class="legend-dot" style="background: #4ade80;"></span>Supabase &amp; Cloud Run ($0 Free)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actual Incurred Spend to Date -->
+        <div class="glass-panel cost-engine-card">
+          <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+            <span>🗄️</span> Actual Database Spend to Date
+          </h3>
+          <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+            Aggregated from <strong><span id="fin-actual-calls-count">108</span> real calls</strong> and <strong><span id="fin-actual-mins-count">367.3</span> minutes</strong> in PostgreSQL.
+          </p>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Twilio Voice Inbound Total</div>
+            <div class="cost-item-rate" id="fin-actual-twilio-voice">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Twilio Media Streams Total</div>
+            <div class="cost-item-rate" id="fin-actual-twilio-streams">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Twilio Phone Numbers (<span id="fin-actual-phone-count">2</span> numbers)</div>
+            <div class="cost-item-rate" id="fin-actual-twilio-numbers">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Gemini Live Audio AI Total</div>
+            <div class="cost-item-rate" id="fin-actual-gemini-live" style="color: #818cf8;">$0.00</div>
+          </div>
+
+          <div class="cost-item-row">
+            <div class="cost-item-name">Gemini Audit Agent Total</div>
+            <div class="cost-item-rate" id="fin-actual-gemini-audit" style="color: #34d399;">$0.00</div>
+          </div>
+
+          <div class="cost-item-row" style="margin-top: 10px; padding-top: 14px; border-top: 2px solid rgba(255, 255, 255, 0.1);">
+            <div class="cost-item-name" style="font-size: 15px; font-weight: 700; color: #fff;">
+              Total Production Tech Burn:
+            </div>
+            <div class="cost-item-rate" id="fin-actual-total-cogs" style="font-size: 18px; color: #f87171;">
+              $0.00
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Interactive Business Simulator -->
+      <section class="glass-panel simulator-panel">
+        <div class="simulator-header">
+          <h3>
+            <span>⚡</span> Interactive SaaS Profit &amp; Growth Simulator
+          </h3>
+          <p>
+            Model customer growth, daily call volume, and subscription pricing to instantly project MRR, API burn, gross margins, and team compensation.
+          </p>
+        </div>
+
+        <div class="simulator-body-grid">
+          <!-- Left: Input Sliders -->
+          <div class="sliders-column">
+            <!-- Slider 1: Active Tenants -->
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Active Business Clients (Tenants)</span>
+                <span class="slider-val-badge" id="sim-badge-tenants">25 clients</span>
+              </div>
+              <input type="range" id="sim-slider-tenants" class="range-slider" min="1" max="100" value="25" step="1">
+            </div>
+
+            <!-- Slider 2: Subscription Plan -->
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Average Plan Tier</span>
+                <span class="slider-val-badge" id="sim-badge-plan">Growth ($150/mo)</span>
+              </div>
+              <select id="sim-select-plan" class="input-control" style="background: rgba(0,0,0,0.4); border-color: rgba(99,102,241,0.4); font-weight: 600;">
+                <option value="starter">Starter Plan ($49/mo &bull; 150 mins included)</option>
+                <option value="growth" selected>Growth Plan ($150/mo &bull; 450 mins included)</option>
+                <option value="scale">Scale Plan ($299/mo &bull; 1,000 mins included)</option>
+              </select>
+            </div>
+
+            <!-- Slider 3: Calls per Day -->
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Calls / Day per Business</span>
+                <span class="slider-val-badge" id="sim-badge-calls">10 calls/day</span>
+              </div>
+              <input type="range" id="sim-slider-calls" class="range-slider" min="1" max="40" value="10" step="1">
+            </div>
+
+            <!-- Slider 4: Call Duration -->
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Average Call Duration</span>
+                <span class="slider-val-badge" id="sim-badge-duration">2.0 mins</span>
+              </div>
+              <input type="range" id="sim-slider-duration" class="range-slider" min="0.5" max="5.0" value="2.0" step="0.1">
+            </div>
+
+            <!-- Option 5: Database & Cloud Run Tier -->
+            <div class="slider-group">
+              <div class="slider-label-row">
+                <span>Database &amp; Cloud Infra</span>
+                <span class="slider-val-badge" id="sim-badge-infra" style="background: rgba(16,185,129,0.2); color: #4ade80;">Free Tier ($0/mo)</span>
+              </div>
+              <select id="sim-select-infra" class="input-control" style="background: rgba(0,0,0,0.4); border-color: rgba(16,185,129,0.4); font-weight: 600;">
+                <option value="free" selected>Free Tier ($0/mo &bull; Supabase + Cloud Run)</option>
+                <option value="pro">Pro Scale Tier ($25/mo &bull; Supabase Pro + Micro Compute)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Right: Live Projections -->
+          <div class="projections-column">
+            <!-- Hero Profit Banner -->
+            <div class="projection-hero-banner">
+              <div>
+                <div style="font-size: 11px; text-transform: uppercase; color: #a7f3d0; font-weight: 700; letter-spacing: 0.5px;">
+                  Projected Net Profit / Mo
+                </div>
+                <div class="proj-hero-val" id="sim-out-profit">$0.00</div>
+                <div style="font-size: 12px; color: #d1fae5; margin-top: 2px;" id="sim-out-margin">
+                  Gross Margin: 0.0%
+                </div>
+              </div>
+              <div style="text-align: right;">
+                <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 600;">
+                  Total Projected MRR
+                </div>
+                <div style="font-size: 24px; font-weight: 800; color: #fff;" id="sim-out-mrr">$0.00</div>
+                <div style="font-size: 12px; color: #a5b4fc;" id="sim-out-arr">ARR: $0.00</div>
+              </div>
+            </div>
+
+            <!-- Projection Stats Grid -->
+            <div class="proj-stat-grid">
+              <div class="proj-stat-box">
+                <div class="proj-stat-label">Monthly Calls</div>
+                <div class="proj-stat-val" id="sim-out-calls">0</div>
+              </div>
+              <div class="proj-stat-box">
+                <div class="proj-stat-label">Total Minutes</div>
+                <div class="proj-stat-val" id="sim-out-minutes">0</div>
+              </div>
+              <div class="proj-stat-box">
+                <div class="proj-stat-label">Monthly API Burn</div>
+                <div class="proj-stat-val" id="sim-out-cogs" style="color: #f87171;">$0.00</div>
+              </div>
+              <div class="proj-stat-box">
+                <div class="proj-stat-label">Cost / Minute</div>
+                <div class="proj-stat-val" id="sim-out-cost-min" style="color: #38bdf8;">$0.00</div>
+              </div>
+            </div>
+
+            <!-- Team Profit Sharing Matrix (50 / 30 / 20) -->
+            <div class="team-split-section">
+              <div class="split-header">
+                <span>🤝 Partner Compensation Scheme (Net Profit Split)</span>
+                <span style="color: #34d399; font-weight: 700;">Zero Base / 100% Performance</span>
+              </div>
+              <div class="split-cards-row">
+                <div class="split-share-card founder">
+                  <div class="split-role">👨‍💻 Founder / Engineering</div>
+                  <div class="split-amount" id="sim-split-founder">$0.00</div>
+                  <div class="split-percent">50% Net Share</div>
+                </div>
+                <div class="split-share-card closer">
+                  <div class="split-role">🤝 Sales Closer Partner</div>
+                  <div class="split-amount" id="sim-split-closer">$0.00</div>
+                  <div class="split-percent">30% Net Share</div>
+                </div>
+                <div class="split-share-card caller">
+                  <div class="split-role">📞 Cold Outreach Partner</div>
+                  <div class="split-amount" id="sim-split-caller">$0.00</div>
+                  <div class="split-percent">20% Net Share</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tenant Revenue Ledger Table -->
+      <section class="glass-panel" style="padding: 24px;">
+        <h3 style="font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; display: flex; align-items: center; gap: 8px;">
+          <span>📋</span> Tenant Economics &amp; Margin Ledger
+        </h3>
+        <p style="font-size: 12.5px; color: var(--text-muted); margin-bottom: 16px;">
+          Live per-client revenue vs API costs incurred in production PostgreSQL.
+        </p>
+
+        <div class="tenant-table-wrapper">
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Business Name</th>
+                <th>Plan</th>
+                <th>Status</th>
+                <th>Calls Logged</th>
+                <th>Minutes Used</th>
+                <th>Monthly Price</th>
+                <th>API COGS Incurred</th>
+                <th>Net Generated</th>
+                <th>Gross Margin</th>
+              </tr>
+            </thead>
+            <tbody id="fin-tenant-table-body">
+              <!-- Dynamically populated by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Live Stripe Customer Charges Feed -->
+      <section class="glass-panel" style="margin-top: 24px; padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+          <div>
+            <h3 style="font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px;">
+              <span>🧾</span> Live Stripe Customer Payments &amp; Invoices
+            </h3>
+            <p style="font-size: 12.5px; color: var(--text-muted); margin-top: 2px;">
+              Direct transaction receipts from Stripe test payments, displaying gross charge, processing fee, and net settlement.
+            </p>
+          </div>
+          <span class="status-tag clean" id="fin-stripe-charge-count">0 Charges</span>
+        </div>
+
+        <div class="tenant-table-wrapper">
+          <table class="fin-table">
+            <thead>
+              <tr>
+                <th>Charge ID</th>
+                <th>Customer</th>
+                <th>Gross Paid</th>
+                <th>Stripe Fee</th>
+                <th>Net Payout</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Receipt</th>
+              </tr>
+            </thead>
+            <tbody id="fin-stripe-table-body">
+              <!-- Dynamically populated by app.js -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </div> <!-- End of view-financials -->
+
+  </div> <!-- End of app-container -->
+
+  <!-- Deep Inspection Modal Drawer -->
+  <div id="inspection-modal" class="modal-overlay">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span id="modal-status-badge" class="status-tag critical">CRITICAL</span>
+          <h2 id="modal-call-title" style="font-size: 17px; color: #fff;">Call Inspection #--</h2>
+        </div>
+        <button id="modal-close-btn" class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Modal Tabs -->
+      <div class="modal-tabs">
+        <button class="modal-tab-btn active" data-modaltab="incident">Incident &amp; DB Analysis</button>
+        <button class="modal-tab-btn" data-modaltab="transcript">Call Transcript</button>
+        <button class="modal-tab-btn" data-modaltab="database">Raw Database State</button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Tab 1: Incident & DB Analysis -->
+        <div id="modaltab-incident" class="modal-tab-content">
+          <!-- Summary Box -->
+          <div style="background: rgba(255,255,255,0.04); border-left: 3px solid #6366f1; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+            <div style="font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 700; margin-bottom: 4px;">Executive Finding</div>
+            <div id="modal-finding-summary" style="font-size: 15px; color: #f8fafc; font-weight: 500; line-height: 1.5;">--</div>
+          </div>
+
+          <!-- Meta Grid -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 20px;">
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Caller Phone</div>
+              <div id="modal-caller-phone" style="font-weight: 600; color: #fff; margin-top: 2px;">--</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Call Time</div>
+              <div id="modal-call-time" style="font-size: 13px; color: #fff; margin-top: 2px;">--</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Duration</div>
+              <div id="modal-duration" style="font-weight: 600; color: #fff; margin-top: 2px;">--</div>
+            </div>
+            <div style="background: rgba(0,0,0,0.25); padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border-subtle);">
+              <div style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">Sentiment</div>
+              <div id="modal-sentiment" style="font-weight: 600; margin-top: 2px;">--</div>
+            </div>
+          </div>
+
+          <!-- Side-by-side Database Verification Matrix -->
+          <div style="margin-bottom: 24px;">
+            <h4 style="font-size: 14px; color: #38bdf8; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+              <span>🗄️</span> Spoken Intent vs Database Row Fidelity
+            </h4>
+            <table class="db-matrix">
+              <thead>
+                <tr>
+                  <th style="width: 50%;">Customer Stated in Transcript</th>
+                  <th style="width: 50%;">Recorded in Database</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td id="modal-db-caller-req" style="vertical-align: top; color: #e2e8f0; line-height: 1.5;">--</td>
+                  <td id="modal-db-recorded" style="vertical-align: top; color: #e2e8f0; line-height: 1.5;">--</td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="modal-db-mismatch-alert" style="display: none; margin-top: 8px; padding: 10px 14px; background: var(--red-bg); border: 1px solid var(--red-border); border-radius: 6px; color: #fca5a5; font-size: 13px;">
+              <strong>⚠️ Discrepancy Note:</strong> <span id="modal-db-mismatch-text">--</span>
+            </div>
+          </div>
+
+          <!-- Incident Report & Root Cause -->
+          <div style="margin-bottom: 20px; background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); padding: 16px; border-radius: 8px;">
+            <h4 style="font-size: 14px; color: #fbbf24; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>📋</span> Incident Report &amp; Production Root Cause
+            </h4>
+            <p id="modal-incident-report" style="font-size: 13px; line-height: 1.6; color: #cbd5e1; white-space: pre-line;">--</p>
+          </div>
+
+          <!-- Recommended Action -->
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); padding: 16px; border-radius: 8px;">
+            <h4 style="font-size: 14px; color: #34d399; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+              <span>🛠️</span> Recommended Resolution for Support Team
+            </h4>
+            <p id="modal-recommended-action" style="font-size: 13px; line-height: 1.6; color: #d1fae5; margin: 0;">--</p>
+          </div>
+        </div>
+
+        <!-- Tab 2: Transcript -->
+        <div id="modaltab-transcript" class="modal-tab-content" style="display: none;">
+          <div id="modal-transcript-container" class="transcript-flow">
+            <!-- Rendered chat bubbles -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Raw Database State -->
+        <div id="modaltab-database" class="modal-tab-content" style="display: none;">
+          <div style="font-size: 12px; color: var(--text-dim); margin-bottom: 8px;">JSON payload of correlated appointments and leads:</div>
+          <pre id="modal-raw-db-json" style="background: #090d16; border: 1px solid var(--border-subtle); border-radius: 6px; padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #38bdf8; overflow-x: auto; max-height: 400px;"></pre>
+        </div>
+      </div>
+
+      <!-- Modal Footer Actions -->
+      <div class="modal-footer">
+        <div style="display: flex; gap: 10px;">
+          <button id="modal-btn-email" class="btn btn-primary btn-sm">
+            ✉️ Dispatch Alert Email
+          </button>
+          <button id="modal-btn-reanalyze" class="btn btn-secondary btn-sm">
+            ✨ Re-Analyze Call
+          </button>
+        </div>
+        <div>
+          <button id="modal-btn-resolve" class="btn btn-success btn-sm">
+            ✓ Mark Issue Resolved
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
