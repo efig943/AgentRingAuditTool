@@ -893,6 +893,27 @@ async function loadFinancials() {
       }
     }
 
+    // Live Google Cloud Section
+    const googleCloud = data.google_cloud || data.reconciliation?.google || {};
+    const googleBadge = document.getElementById('fin-google-status-badge');
+    const googleSub = document.getElementById('fin-google-sub');
+    if (googleBadge) {
+      if (googleCloud.connected) {
+        googleBadge.className = 'status-tag clean';
+        googleBadge.innerText = '● Synced';
+        if (googleSub) googleSub.innerHTML = `Account: <strong style="color: #4ade80;">${googleCloud.billing_account_name || 'Active'}</strong>`;
+      } else if (googleCloud.status === 'permission_needed') {
+        googleBadge.className = 'status-tag warning';
+        googleBadge.innerText = '● Key Linked';
+        if (googleSub) googleSub.innerHTML = `Role: <strong style="color: #fbbf24;">Needs Billing Viewer</strong>`;
+      } else {
+        googleBadge.className = 'status-tag';
+        googleBadge.style.background = 'rgba(168,85,247,0.2)';
+        googleBadge.style.color = '#c084fc';
+        googleBadge.innerText = '● Rate Synced';
+      }
+    }
+
     const stripeTbody = document.getElementById('fin-stripe-table-body');
     if (stripeTbody) {
       const charges = stripeObj.recent_charges ?? [];

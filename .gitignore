@@ -21,3 +21,9 @@ Thumbs.db
 # Scratch and database backups
 scratch/
 scripts/backups/
+
+# GCP Service Account Keys
+*ai-vp-*.json
+*service_account*.json
+gcp_billing_key.json
+*.key.json

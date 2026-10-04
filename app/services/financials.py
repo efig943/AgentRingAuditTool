@@ -1,3 +1,4 @@
+import os
 import math
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
@@ -246,19 +247,83 @@ def fetch_twilio_metrics() -> Dict[str, Any]:
             "categories": {}
         }
 
+def fetch_google_billing_metrics() -> Dict[str, Any]:
+    """
+    Fetch live Google Cloud billing account information using service account key.
+    """
+    key_path = getattr(config, "GCP_KEY_PATH", None)
+    if not key_path or not os.path.exists(str(key_path)):
+        return {
+            "connected": False,
+            "status": "missing_key",
+            "message": "Service account JSON key not found in project folder."
+        }
+        
+    try:
+        from google.oauth2 import service_account
+        from googleapiclient.discovery import build
+        
+        scopes = [
+            "https://www.googleapis.com/auth/cloud-billing.readonly",
+            "https://www.googleapis.com/auth/cloud-platform"
+        ]
+        creds = service_account.Credentials.from_service_account_file(str(key_path), scopes=scopes)
+        service = build("cloudbilling", "v1", credentials=creds, cache_discovery=False)
+        
+        account_id = getattr(config, "GCP_BILLING_ACCOUNT_ID", "01D9EB-6CC35F-F66906")
+        account_name = f"billingAccounts/{account_id}" if not str(account_id).startswith("billingAccounts/") else account_id
+        
+        try:
+            acc_info = service.billingAccounts().get(name=account_name).execute()
+            return {
+                "connected": True,
+                "status": "synced",
+                "service_account": creds.service_account_email,
+                "billing_account_id": account_id,
+                "billing_account_name": acc_info.get("displayName", "Bloodhunt"),
+                "is_open": acc_info.get("open", True),
+                "message": "Connected to Google Cloud Billing API"
+            }
+        except Exception as perm_err:
+            err_str = str(perm_err)
+            if "The caller does not have permission" in err_str:
+                return {
+                    "connected": False,
+                    "status": "permission_needed",
+                    "service_account": creds.service_account_email,
+                    "billing_account_id": account_id,
+                    "message": "Service account needs 'Billing Account Viewer' role on Billing Account 01D9EB-6CC35F-F66906."
+                }
+            return {
+                "connected": False,
+                "status": "error",
+                "service_account": creds.service_account_email,
+                "billing_account_id": account_id,
+                "message": err_str
+            }
+    except Exception as e:
+        logger.error(f"Error communicating with Google Cloud Billing API: {e}")
+        return {
+            "connected": False,
+            "status": "error",
+            "message": str(e)
+        }
+
 def get_financial_summary() -> Dict[str, Any]:
     """
     Calculate real business financial metrics combining live Stripe payment records
-    (MRR, charges, fees, balance), live Twilio usage & balance records, and PostgreSQL database records (call_logs, tenants).
+    (MRR, charges, fees, balance), live Twilio usage & balance records, Google Cloud Billing records,
+    and PostgreSQL database records (call_logs, tenants).
     
     Rigorously segments:
       - Current Billing Cycle P&L (Monthly Run-Rate: MRR vs Monthly Direct COGS)
       - Cumulative Lifetime Cash Flow (Cash Collected vs All-Time Burn)
     """
-    # 1. Fetch live Stripe and Twilio metrics
+    # 1. Fetch live Stripe, Twilio, and Google metrics
     stripe_data = fetch_stripe_metrics()
     subs_map = stripe_data.get("subscriptions_map", {})
     twilio_data = fetch_twilio_metrics()
+    google_data = fetch_google_billing_metrics()
 
     conn = psycopg2.connect(config.DATABASE_URL, connect_timeout=10)
     try:
@@ -598,12 +663,17 @@ def get_financial_summary() -> Dict[str, Any]:
                     "categories": twilio_data.get("categories", {})
                 },
                 "google": {
-                    "connected": False,
+                    "connected": google_data.get("connected", False),
+                    "status": google_data.get("status", "unknown"),
+                    "service_account": google_data.get("service_account"),
+                    "billing_account_id": google_data.get("billing_account_id"),
+                    "billing_account_name": google_data.get("billing_account_name"),
                     "method": "Real-time per-second formula ($0.075/min)",
                     "cycle_ai_calculated": round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2),
-                    "status_note": "Ready for free GCP Cloud Billing API"
+                    "message": google_data.get("message")
                 }
-            }
+            },
+            "google_cloud": google_data
         }
     finally:
         conn.close()

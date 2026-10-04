@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/static/styles.css?v=20261004_v3">
+  <link rel="stylesheet" href="/static/styles.css?v=20261004_v4">
 </head>
 <body>
   <div class="app-container">
@@ -246,8 +246,8 @@
     <!-- View Container 2: Financials & Business Analytics -->
     <div id="view-financials" class="financials-container" style="display: none;">
       
-      <!-- Live API Provider Integration Banners (Stripe & Twilio) -->
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px;">
+      <!-- Live API Provider Integration Banners (Stripe, Twilio & Google Cloud) -->
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; margin-bottom: 20px;">
         <!-- Stripe Live Feed -->
         <div class="glass-panel" style="padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #6366f1; background: rgba(99, 102, 241, 0.08);">
           <div style="display: flex; align-items: center; gap: 12px;">
@@ -284,7 +284,7 @@
             <span style="font-size: 24px;">📞</span>
             <div>
               <div style="font-size: 13.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
-                <span>Twilio Live Telephony</span>
+                <span>Twilio Telephony</span>
                 <span class="status-tag clean" id="fin-twilio-status-badge" style="font-size: 10px; padding: 1px 6px;">● Synced</span>
               </div>
               <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">
@@ -300,6 +300,32 @@
             <div>
               <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Account SID</div>
               <div style="font-size: 12px; font-weight: 600; color: #94a3b8; font-family: monospace;" id="fin-twilio-sid">ACb4...cf20</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Google Cloud Live Feed -->
+        <div class="glass-panel" style="padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #a855f7; background: rgba(168, 85, 247, 0.08);">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 24px;">🧠</span>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 6px;">
+                <span>Google Cloud &amp; AI</span>
+                <span class="status-tag" id="fin-google-status-badge" style="font-size: 10px; padding: 1px 6px; background: rgba(168,85,247,0.2); color: #c084fc;">● Key Linked</span>
+              </div>
+              <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;" id="fin-google-sub">
+                Account: <strong style="color: #c084fc;">Bloodhunt</strong>
+              </div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 14px; text-align: right;">
+            <div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Rate Model</div>
+              <div style="font-size: 13px; font-weight: 700; color: #c084fc;">$0.075 / min</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; text-transform: uppercase; color: var(--text-muted); font-weight: 600;">Project</div>
+              <div style="font-size: 12px; font-weight: 600; color: #94a3b8; font-family: monospace;">ai-vp-506402</div>
             </div>
           </div>
         </div>
@@ -845,6 +871,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="/static/app.js?v=20261004_v3"></script>
+  <script src="/static/app.js?v=20261004_v4"></script>
 </body>
 </html>

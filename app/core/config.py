@@ -37,3 +37,18 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 # Twilio
 TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
+
+# Google Cloud Billing
+GCP_BILLING_ACCOUNT_ID = os.getenv("GCP_BILLING_ACCOUNT_ID", "01D9EB-6CC35F-F66906")
+GCP_KEY_PATH = None
+env_gcp_key = os.getenv("GCP_KEY_PATH")
+if env_gcp_key and (BASE_DIR / env_gcp_key).exists():
+    GCP_KEY_PATH = BASE_DIR / env_gcp_key
+else:
+    for f in BASE_DIR.glob("*ai-vp-*.json"):
+        GCP_KEY_PATH = f
+        break
+    if not GCP_KEY_PATH:
+        for f in BASE_DIR.glob("*billing*.json"):
+            GCP_KEY_PATH = f
+            break
