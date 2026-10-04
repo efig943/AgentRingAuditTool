@@ -33,3 +33,7 @@ SQLITE_DB_PATH = BASE_DIR / "audits.db"
 
 # Stripe
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
+
+# Twilio
+TWILIO_ACCOUNT_SID = os.getenv("TWILIO_ACCOUNT_SID", "")
+TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")

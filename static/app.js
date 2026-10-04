@@ -864,10 +864,34 @@ async function loadFinancials() {
     const stripeGross = stripeObj.gross_collected ?? stripeObj.total_gross_collected ?? 0;
     const stripeFees = stripeObj.stripe_fees ?? stripeObj.total_stripe_fees ?? 0;
     const stripeNet = stripeObj.net_collected ?? stripeObj.net_cash_collected ?? stripeObj.total_net_collected ?? 0;
+    const stripeAvail = stripeObj.available_balance ?? data.lifetime?.available_balance ?? 0;
 
     if (document.getElementById('fin-stripe-gross')) document.getElementById('fin-stripe-gross').innerText = fmtMoney(stripeGross);
     if (document.getElementById('fin-stripe-fees')) document.getElementById('fin-stripe-fees').innerText = fmtMoney(stripeFees);
     if (document.getElementById('fin-stripe-net')) document.getElementById('fin-stripe-net').innerText = fmtMoney(stripeNet);
+    if (document.getElementById('fin-stripe-balance')) document.getElementById('fin-stripe-balance').innerText = fmtMoney(stripeAvail);
+
+    // Live Twilio Section
+    const twilio = data.twilio || {};
+    if (document.getElementById('fin-twilio-balance')) {
+      document.getElementById('fin-twilio-balance').innerText = fmtMoney(twilio.balance);
+    }
+    if (document.getElementById('fin-twilio-month-billed')) {
+      document.getElementById('fin-twilio-month-billed').innerText = fmtMoney(twilio.month_to_date_total);
+    }
+    if (document.getElementById('fin-twilio-sid')) {
+      document.getElementById('fin-twilio-sid').innerText = twilio.account_sid_masked || 'AC...';
+    }
+    const twilioBadge = document.getElementById('fin-twilio-status-badge');
+    if (twilioBadge) {
+      if (twilio.connected) {
+        twilioBadge.className = 'status-tag clean';
+        twilioBadge.innerText = '● Synced';
+      } else {
+        twilioBadge.className = 'status-tag warning';
+        twilioBadge.innerText = 'Offline';
+      }
+    }
 
     const stripeTbody = document.getElementById('fin-stripe-table-body');
     if (stripeTbody) {

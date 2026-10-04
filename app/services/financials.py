@@ -178,18 +178,87 @@ def fetch_stripe_metrics() -> Dict[str, Any]:
             "charges": []
         }
 
+def fetch_twilio_metrics() -> Dict[str, Any]:
+    """
+    Fetch live account balance and month-to-date usage records directly from Twilio API.
+    """
+    sid = getattr(config, "TWILIO_ACCOUNT_SID", None)
+    tok = getattr(config, "TWILIO_AUTH_TOKEN", None)
+    if not sid or not tok:
+        return {
+            "connected": False,
+            "error": "Twilio credentials not configured in .env",
+            "balance": 0.0,
+            "currency": "USD",
+            "month_to_date_total": 0.0,
+            "categories": {}
+        }
+    
+    try:
+        from twilio.rest import Client
+        client = Client(sid, tok)
+        
+        # 1. Live account balance
+        bal_obj = client.api.v2010.account.balance.fetch()
+        balance = float(bal_obj.balance or 0.0)
+        currency = (bal_obj.currency or "USD").upper()
+
+        # 2. Current Month Usage Records
+        records = client.usage.records.this_month.list()
+        month_total = 0.0
+        categories_dict = {}
+        
+        for r in records:
+            price = float(r.price or 0.0)
+            usage = float(r.usage or 0.0)
+            cat = r.category
+            
+            if cat == "totalprice":
+                month_total = price
+            elif price > 0 or usage > 0:
+                categories_dict[cat] = {
+                    "usage": usage,
+                    "usage_unit": r.usage_unit or "",
+                    "price": round(price, 4),
+                    "description": r.description or cat
+                }
+                
+        # If totalprice record wasn't explicitly found, sum individual categories
+        if month_total == 0.0 and categories_dict:
+            month_total = round(sum(item["price"] for item in categories_dict.values()), 4)
+
+        return {
+            "connected": True,
+            "account_sid_masked": sid[:6] + "..." + sid[-4:],
+            "balance": round(balance, 2),
+            "currency": currency,
+            "month_to_date_total": round(month_total, 2),
+            "categories": categories_dict
+        }
+    except Exception as e:
+        logger.error(f"Error communicating with Twilio: {e}")
+        return {
+            "connected": False,
+            "error": str(e),
+            "balance": 0.0,
+            "currency": "USD",
+            "month_to_date_total": 0.0,
+            "categories": {}
+        }
+
 def get_financial_summary() -> Dict[str, Any]:
     """
     Calculate real business financial metrics combining live Stripe payment records
-    (MRR, charges, fees, balance) and PostgreSQL database records (call_logs, tenants).
+    (MRR, charges, fees, balance), live Twilio usage & balance records, and PostgreSQL database records (call_logs, tenants).
     
     Rigorously segments:
       - Current Billing Cycle P&L (Monthly Run-Rate: MRR vs Monthly Direct COGS)
       - Cumulative Lifetime Cash Flow (Cash Collected vs All-Time Burn)
     """
-    # 1. Fetch live Stripe metrics
+    # 1. Fetch live Stripe and Twilio metrics
     stripe_data = fetch_stripe_metrics()
     subs_map = stripe_data.get("subscriptions_map", {})
+    twilio_data = fetch_twilio_metrics()
 
     conn = psycopg2.connect(config.DATABASE_URL, connect_timeout=10)
     try:
@@ -507,7 +576,34 @@ def get_financial_summary() -> Dict[str, Any]:
             },
             
             # Per-Tenant Performance Ledger
-            "tenant_ledger": tenant_ledger
+            "tenant_ledger": tenant_ledger,
+
+            # Live Twilio Integration
+            "twilio": twilio_data,
+
+            # 3-Way Live Reconciliation (Stripe, Twilio, Gemini)
+            "reconciliation": {
+                "stripe": {
+                    "connected": stripe_data.get("connected", False),
+                    "live_balance": stripe_data.get("available_balance", 0.0),
+                    "live_fees": stripe_data.get("total_stripe_fees", 0.0),
+                    "live_gross": stripe_data.get("total_gross_collected", 0.0),
+                    "cycle_fees_calculated": round(cycle_stripe_fees, 2)
+                },
+                "twilio": {
+                    "connected": twilio_data.get("connected", False),
+                    "live_balance": twilio_data.get("balance", 0.0),
+                    "live_month_to_date": twilio_data.get("month_to_date_total", 0.0),
+                    "cycle_telephony_calculated": round(cycle_twilio_voice + cycle_twilio_streams + cycle_twilio_recording + cycle_phone_numbers, 2),
+                    "categories": twilio_data.get("categories", {})
+                },
+                "google": {
+                    "connected": False,
+                    "method": "Real-time per-second formula ($0.075/min)",
+                    "cycle_ai_calculated": round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2),
+                    "status_note": "Ready for free GCP Cloud Billing API"
+                }
+            }
         }
     finally:
         conn.close()
