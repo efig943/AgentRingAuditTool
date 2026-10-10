@@ -37,8 +37,13 @@ function initEventListeners() {
   const simTenantsSlider = document.getElementById('sim-slider-tenants');
   const simCallsSlider = document.getElementById('sim-slider-calls');
   const simDurationSlider = document.getElementById('sim-slider-duration');
+  const simSmsSlider = document.getElementById('sim-slider-sms');
+  const simApptSlider = document.getElementById('sim-slider-appt');
+  const simTransferSlider = document.getElementById('sim-slider-transfer');
+  const simChurnSlider = document.getElementById('sim-slider-churn');
   const simPlanSelect = document.getElementById('sim-select-plan');
   const simInfraSelect = document.getElementById('sim-select-infra');
+  const simBtnLiveSync = document.getElementById('sim-btn-live-sync');
 
   if (simTenantsSlider) {
     simTenantsSlider.addEventListener('input', (e) => {
@@ -51,7 +56,7 @@ function initEventListeners() {
   if (simCallsSlider) {
     simCallsSlider.addEventListener('input', (e) => {
       const badge = document.getElementById('sim-badge-calls');
-      if (badge) badge.innerText = `${e.target.value} calls/day`;
+      if (badge) badge.innerText = `${parseFloat(e.target.value).toFixed(1)} calls/day`;
       runFinancialSimulation();
     });
   }
@@ -64,30 +69,6 @@ function initEventListeners() {
     });
   }
 
-  // Preset Buttons Listener
-  document.querySelectorAll('.sim-preset-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const t = btn.dataset.tenants;
-      const c = btn.dataset.calls;
-      const d = btn.dataset.duration;
-      const p = btn.dataset.plan;
-      const s = btn.dataset.sms;
-      const tr = btn.dataset.transfer;
-
-      if (t && simTenantsSlider) { simTenantsSlider.value = t; const badge = document.getElementById('sim-badge-tenants'); if (badge) badge.innerText = `${t} clients`; }
-      if (c && simCallsSlider) { simCallsSlider.value = c; const badge = document.getElementById('sim-badge-calls'); if (badge) badge.innerText = `${c} calls/day`; }
-      if (d && simDurationSlider) { simDurationSlider.value = d; const badge = document.getElementById('sim-badge-duration'); if (badge) badge.innerText = `${parseFloat(d).toFixed(1)} mins`; }
-      if (p && simPlanSelect) { simPlanSelect.value = p; }
-      if (s && document.getElementById('sim-slider-sms')) { document.getElementById('sim-slider-sms').value = s; const badge = document.getElementById('sim-badge-sms'); if (badge) badge.innerText = `${s}%`; }
-      if (tr && document.getElementById('sim-slider-transfer')) { document.getElementById('sim-slider-transfer').value = tr; const badge = document.getElementById('sim-badge-transfer'); if (badge) badge.innerText = `${tr}%`; }
-
-      runFinancialSimulation();
-    });
-  });
-
-  const simSmsSlider = document.getElementById('sim-slider-sms');
   if (simSmsSlider) {
     simSmsSlider.addEventListener('input', (e) => {
       const badge = document.getElementById('sim-badge-sms');
@@ -96,12 +77,114 @@ function initEventListeners() {
     });
   }
 
-  const simTransferSlider = document.getElementById('sim-slider-transfer');
+  if (simApptSlider) {
+    simApptSlider.addEventListener('input', (e) => {
+      const badge = document.getElementById('sim-badge-appt');
+      if (badge) badge.innerText = `${e.target.value}%`;
+      runFinancialSimulation();
+    });
+  }
+
   if (simTransferSlider) {
     simTransferSlider.addEventListener('input', (e) => {
       const badge = document.getElementById('sim-badge-transfer');
       if (badge) badge.innerText = `${e.target.value}%`;
       runFinancialSimulation();
+    });
+  }
+
+  if (simChurnSlider) {
+    simChurnSlider.addEventListener('input', (e) => {
+      const badge = document.getElementById('sim-badge-churn');
+      if (badge) badge.innerText = `${e.target.value}%`;
+      runFinancialSimulation();
+    });
+  }
+
+  // Preset Buttons Listener
+  document.querySelectorAll('.sim-preset-btn').forEach(btn => {
+    if (btn.id === 'sim-btn-live-sync') return;
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.tenants;
+      const c = btn.dataset.calls;
+      const d = btn.dataset.duration;
+      const p = btn.dataset.plan;
+      const s = btn.dataset.sms;
+      const ap = btn.dataset.appt;
+      const tr = btn.dataset.transfer;
+      const ch = btn.dataset.churn;
+
+      if (t && simTenantsSlider) { simTenantsSlider.value = t; const badge = document.getElementById('sim-badge-tenants'); if (badge) badge.innerText = `${t} clients`; }
+      if (c && simCallsSlider) { simCallsSlider.value = c; const badge = document.getElementById('sim-badge-calls'); if (badge) badge.innerText = `${parseFloat(c).toFixed(1)} calls/day`; }
+      if (d && simDurationSlider) { simDurationSlider.value = d; const badge = document.getElementById('sim-badge-duration'); if (badge) badge.innerText = `${parseFloat(d).toFixed(1)} mins`; }
+      if (p && simPlanSelect) { simPlanSelect.value = p; }
+      if (s && simSmsSlider) { simSmsSlider.value = s; const badge = document.getElementById('sim-badge-sms'); if (badge) badge.innerText = `${s}%`; }
+      if (ap && simApptSlider) { simApptSlider.value = ap; const badge = document.getElementById('sim-badge-appt'); if (badge) badge.innerText = `${ap}%`; }
+      if (tr && simTransferSlider) { simTransferSlider.value = tr; const badge = document.getElementById('sim-badge-transfer'); if (badge) badge.innerText = `${tr}%`; }
+      if (ch && simChurnSlider) { simChurnSlider.value = ch; const badge = document.getElementById('sim-badge-churn'); if (badge) badge.innerText = `${ch}%`; }
+
+      runFinancialSimulation();
+    });
+  });
+
+  // Pull Live Telemetry from Production DB
+  if (simBtnLiveSync) {
+    simBtnLiveSync.addEventListener('click', async () => {
+      try {
+        simBtnLiveSync.innerHTML = '<span>⏳</span> Syncing...';
+        const res = await fetch('/api/financials');
+        if (!res.ok) throw new Error('Failed to fetch live financials');
+        const data = await res.json();
+        const d = data.telemetry_defaults || {};
+
+        if (d.tenants_count && simTenantsSlider) {
+          simTenantsSlider.value = d.tenants_count;
+          const badge = document.getElementById('sim-badge-tenants');
+          if (badge) badge.innerText = `${d.tenants_count} clients`;
+        }
+        if (d.calls_per_day_per_tenant && simCallsSlider) {
+          simCallsSlider.value = d.calls_per_day_per_tenant;
+          const badge = document.getElementById('sim-badge-calls');
+          if (badge) badge.innerText = `${parseFloat(d.calls_per_day_per_tenant).toFixed(1)} calls/day`;
+        }
+        if (d.avg_call_minutes && simDurationSlider) {
+          simDurationSlider.value = d.avg_call_minutes;
+          const badge = document.getElementById('sim-badge-duration');
+          if (badge) badge.innerText = `${parseFloat(d.avg_call_minutes).toFixed(1)} mins`;
+        }
+        if (d.sms_followup_pct !== undefined && simSmsSlider) {
+          simSmsSlider.value = Math.round(d.sms_followup_pct);
+          const badge = document.getElementById('sim-badge-sms');
+          if (badge) badge.innerText = `${Math.round(d.sms_followup_pct)}%`;
+        }
+        if (d.appointment_booking_pct !== undefined && simApptSlider) {
+          simApptSlider.value = Math.round(d.appointment_booking_pct);
+          const badge = document.getElementById('sim-badge-appt');
+          if (badge) badge.innerText = `${Math.round(d.appointment_booking_pct)}%`;
+        }
+        if (d.transfer_to_human_pct !== undefined && simTransferSlider) {
+          simTransferSlider.value = Math.round(d.transfer_to_human_pct);
+          const badge = document.getElementById('sim-badge-transfer');
+          if (badge) badge.innerText = `${Math.round(d.transfer_to_human_pct)}%`;
+        }
+        if (d.plan_tier && simPlanSelect) {
+          simPlanSelect.value = d.plan_tier;
+        }
+
+        document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
+        const baselineBtn = document.querySelector('.sim-preset-btn[data-tenants="2"]');
+        if (baselineBtn) baselineBtn.classList.add('active');
+
+        runFinancialSimulation();
+        simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
+        showToast(`Telemetry Synced: ${d.total_db_calls || 103} calls, ${d.total_db_leads || 52} leads, ${d.total_db_appointments || 6} appts!`, 'success');
+      } catch (err) {
+        console.error('Error syncing telemetry:', err);
+        simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
+        showToast('Error syncing telemetry defaults', 'error');
+      }
     });
   }
 
@@ -376,9 +459,11 @@ async function runFinancialSimulation() {
     const tenantsCount = parseInt(document.getElementById('sim-slider-tenants')?.value, 10) || 10;
     const planTier = document.getElementById('sim-select-plan')?.value || 'growth';
     const callsPerDay = parseFloat(document.getElementById('sim-slider-calls')?.value) || 5.0;
-    const avgMinutes = parseFloat(document.getElementById('sim-slider-duration')?.value) || 0.8;
+    const avgMinutes = parseFloat(document.getElementById('sim-slider-duration')?.value) || 1.0;
     const smsRate = (parseFloat(document.getElementById('sim-slider-sms')?.value) || 50) / 100.0;
-    const transferRate = (parseFloat(document.getElementById('sim-slider-transfer')?.value) || 5) / 100.0;
+    const apptRate = (parseFloat(document.getElementById('sim-slider-appt')?.value) || 6) / 100.0;
+    const transferRate = (parseFloat(document.getElementById('sim-slider-transfer')?.value) || 1) / 100.0;
+    const churnRate = (parseFloat(document.getElementById('sim-slider-churn')?.value) || 5) / 100.0;
     const infraTier = document.getElementById('sim-select-infra')?.value || 'free';
 
     try {
@@ -391,7 +476,9 @@ async function runFinancialSimulation() {
           calls_per_day_per_tenant: callsPerDay,
           avg_call_minutes: avgMinutes,
           sms_followup_pct: smsRate,
+          appointment_booking_pct: apptRate,
           transfer_to_human_pct: transferRate,
+          churn_rate_pct: churnRate,
           infra_tier: infraTier
         })
       });
@@ -406,11 +493,16 @@ async function runFinancialSimulation() {
       const prof = sim.profitability || {};
       const costs = sim.costs || {};
       const vol = sim.volume || {};
+      const cap = sim.capacity || {};
+      const saas = sim.saas_metrics || {};
       const splits = sim.team_splits || {};
 
       if (document.getElementById('sim-out-profit')) document.getElementById('sim-out-profit').innerText = fmtMoney(prof.gross_profit);
       if (document.getElementById('sim-out-margin')) document.getElementById('sim-out-margin').innerText = `Gross Margin: ${prof.margin_pct}%`;
       if (document.getElementById('sim-out-profit-client')) document.getElementById('sim-out-profit-client').innerText = `${fmtMoney(prof.profit_per_client)} / client / mo`;
+      if (document.getElementById('sim-out-ltv')) {
+        document.getElementById('sim-out-ltv').innerText = `LTV: ${fmtMoney(saas.client_ltv)} • ${saas.customer_lifetime_months} mo lifetime (${saas.churn_rate_pct}% churn)`;
+      }
       
       if (document.getElementById('sim-out-mrr')) document.getElementById('sim-out-mrr').innerText = fmtMoney(rev.total_mrr);
       if (document.getElementById('sim-out-arr')) {
@@ -423,10 +515,38 @@ async function runFinancialSimulation() {
       if (document.getElementById('sim-out-cogs')) document.getElementById('sim-out-cogs').innerText = fmtMoney(costs.total_cogs);
       if (document.getElementById('sim-out-cost-call')) document.getElementById('sim-out-cost-call').innerText = `$${Number(prof.cost_per_call || 0).toFixed(3)} / call`;
 
+      // Capacity & Concurrency Sizing
+      if (document.getElementById('sim-cap-concurrent')) {
+        document.getElementById('sim-cap-concurrent').innerText = `${cap.peak_concurrent_calls} line${cap.peak_concurrent_calls > 1 ? 's' : ''}`;
+      }
+      if (document.getElementById('sim-cap-containers')) {
+        document.getElementById('sim-cap-containers').innerText = `${cap.cloud_run_containers} container${cap.cloud_run_containers > 1 ? 's' : ''}`;
+      }
+      if (document.getElementById('sim-cap-peakhour')) {
+        document.getElementById('sim-cap-peakhour').innerText = `${cap.peak_hour_calls} calls/h`;
+      }
+      if (document.getElementById('sim-cap-bandwidth')) {
+        document.getElementById('sim-cap-bandwidth').innerText = `${cap.bandwidth_mbps} Mbps`;
+      }
+      if (document.getElementById('sim-cap-gemini-status')) {
+        const tag = document.getElementById('sim-cap-gemini-status');
+        tag.innerText = cap.gemini_status || 'Healthy';
+        if (cap.peak_concurrent_calls > 100) {
+          tag.className = 'status-tag failed';
+        } else if (cap.peak_concurrent_calls > 50) {
+          tag.className = 'status-tag warning';
+        } else {
+          tag.className = 'status-tag clean';
+        }
+      }
+
       // Granular COGS Breakdown
       if (document.getElementById('sim-cogs-twilio')) document.getElementById('sim-cogs-twilio').innerText = fmtMoney(costs.total_twilio);
       if (document.getElementById('sim-cogs-gemini')) document.getElementById('sim-cogs-gemini').innerText = fmtMoney(costs.total_gemini);
-      if (document.getElementById('sim-cogs-sms')) document.getElementById('sim-cogs-sms').innerText = fmtMoney(costs.sms_fees);
+      if (document.getElementById('sim-cogs-sms')) {
+        document.getElementById('sim-cogs-sms').innerText = fmtMoney(costs.sms_fees);
+        document.getElementById('sim-cogs-sms').title = `Lead SMS: ${fmtMoney(costs.sms_lead_cost)} | Appt SMS: ${fmtMoney(costs.sms_appt_cost)}`;
+      }
       if (document.getElementById('sim-cogs-numbers')) document.getElementById('sim-cogs-numbers').innerText = fmtMoney(costs.twilio_numbers);
       if (document.getElementById('sim-cogs-stripe')) document.getElementById('sim-cogs-stripe').innerText = fmtMoney(costs.stripe_fees);
 

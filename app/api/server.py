@@ -52,8 +52,11 @@ class SimulationRequest(BaseModel):
     calls_per_day_per_tenant: float = 5.0
     avg_call_minutes: float = 0.8
     sms_followup_pct: Optional[float] = 0.50
-    transfer_to_human_pct: Optional[float] = 0.05
+    appointment_booking_pct: Optional[float] = 0.06
+    transfer_to_human_pct: Optional[float] = 0.01
+    churn_rate_pct: Optional[float] = 0.05
     infra_tier: Optional[str] = "free"
+
 
 @app.on_event("startup")
 def startup_event():
@@ -230,7 +233,9 @@ def simulate_financials_endpoint(req: SimulationRequest):
             calls_per_day_per_tenant=req.calls_per_day_per_tenant,
             avg_call_minutes=req.avg_call_minutes,
             sms_followup_pct=req.sms_followup_pct if req.sms_followup_pct is not None else 0.50,
-            transfer_to_human_pct=req.transfer_to_human_pct if req.transfer_to_human_pct is not None else 0.05,
+            appointment_booking_pct=req.appointment_booking_pct if req.appointment_booking_pct is not None else 0.06,
+            transfer_to_human_pct=req.transfer_to_human_pct if req.transfer_to_human_pct is not None else 0.01,
+            churn_rate_pct=req.churn_rate_pct if req.churn_rate_pct is not None else 0.05,
             infra_tier=req.infra_tier or "free"
         )
     except Exception as e:
