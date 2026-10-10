@@ -299,19 +299,19 @@
         <!-- 1-Click Production Scenario Presets -->
         <div style="margin-bottom: 22px; padding: 12px 16px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span style="font-size: 12px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">⚡ Quick Presets:</span>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="2" data-calls="4.9" data-duration="1.0" data-plan="growth" data-sms="50" data-appt="6" data-transfer="1" data-churn="5">
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="2" data-calls="4.9" data-duration="1.0" data-plan="growth" data-transfer="1">
             📍 Current Baseline (2 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn active" data-tenants="10" data-calls="5.0" data-duration="1.0" data-plan="growth" data-sms="50" data-appt="6" data-transfer="1" data-churn="5">
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn active" data-tenants="10" data-calls="5.0" data-duration="1.0" data-plan="growth" data-transfer="1">
             📈 Growth Target (10 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="15" data-calls="12.0" data-duration="1.1" data-plan="growth" data-sms="65" data-appt="12" data-transfer="5" data-churn="4">
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="15" data-calls="12.0" data-duration="1.1" data-plan="growth" data-transfer="5">
             🔧 Emergency Trades (15 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="25" data-calls="6.5" data-duration="1.8" data-plan="scale" data-sms="45" data-appt="20" data-transfer="8" data-churn="3">
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="25" data-calls="6.5" data-duration="1.8" data-plan="scale" data-transfer="8">
             ⚖️ Professional Services (25 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="50" data-calls="7.0" data-duration="1.0" data-plan="blended" data-sms="55" data-appt="8" data-transfer="3" data-churn="4">
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="50" data-calls="7.0" data-duration="1.0" data-plan="blended" data-transfer="3">
             🚀 Agency Scale (50 Clients)
           </button>
         </div>
@@ -351,50 +351,26 @@
               <input type="range" id="sim-slider-duration" min="0.4" max="4.0" step="0.1" value="1.0" class="sim-range">
             </div>
 
-            <!-- Behavioral & Operational Rates 2x2 Grid -->
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                  <label style="color: #cbd5e1; font-weight: 600;">Lead Followup SMS</label>
-                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-sms">50%</span>
-                </div>
-                <input type="range" id="sim-slider-sms" min="0" max="100" step="5" value="50" class="sim-range">
-                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">Lead dispatch (DB: 50.5%)</div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                <label style="color: #fff; font-weight: 600;">Staff Live Forwarding Rate</label>
+                <span class="sim-badge" id="sim-badge-transfer">1%</span>
               </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                  <label style="color: #cbd5e1; font-weight: 600;">Appt Booking Rate</label>
-                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-appt">6%</span>
-                </div>
-                <input type="range" id="sim-slider-appt" min="0" max="30" step="1" value="6" class="sim-range">
-                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">Calendar invite + 24h reminder (DB: 5.8%)</div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px;">
+                <span>Calls transferred to live human staff</span>
+                <span>Outbound &lt;Dial&gt;: <strong style="color: #38bdf8;">$0.0140/m (DB: 1.0%)</strong></span>
               </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                  <label style="color: #cbd5e1; font-weight: 600;">Staff Live Forwarding</label>
-                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-transfer">1%</span>
-                </div>
-                <input type="range" id="sim-slider-transfer" min="0" max="25" step="1" value="1" class="sim-range">
-                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">Outbound &lt;Dial&gt; ($0.0140/m)</div>
-              </div>
-              <div>
-                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                  <label style="color: #cbd5e1; font-weight: 600;">Monthly Client Churn</label>
-                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-churn">5%</span>
-                </div>
-                <input type="range" id="sim-slider-churn" min="1" max="20" step="1" value="5" class="sim-range">
-                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">SaaS retention horizon</div>
-              </div>
+              <input type="range" id="sim-slider-transfer" min="0" max="25" step="1" value="1" class="sim-range">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px;">
               <div>
                 <label style="display: block; font-size: 12.5px; color: #fff; font-weight: 600; margin-bottom: 6px;">Subscription Plan</label>
                 <select id="sim-select-plan" class="input-control" style="background: rgba(0,0,0,0.3); width: 100%;">
-                  <option value="growth" selected>Growth ($150/mo &bull; 450m)</option>
-                  <option value="starter">Starter ($49/mo &bull; 150m)</option>
-                  <option value="scale">Scale ($299/mo &bull; 1,000m)</option>
-                  <option value="blended">Blended Portfolio Mix</option>
+                  <option value="growth" selected>Growth ($150/mo &bull; 1,000m)</option>
+                  <option value="starter">Starter ($50/mo &bull; 300m)</option>
+                  <option value="scale">Scale ($300/mo &bull; 2,500m)</option>
+                  <option value="blended">Blended Mix (940m avg)</option>
                 </select>
               </div>
               <div>
@@ -419,7 +395,6 @@
                     <span style="font-size: 12.5px; color: #38bdf8; font-weight: 700;" id="sim-out-margin">Gross Margin: 0.0%</span>
                     <span style="font-size: 12px; color: #a5b4fc; font-weight: 600;" id="sim-out-profit-client">$0.00 / client / mo</span>
                   </div>
-                  <div style="font-size: 11px; color: #cbd5e1; margin-top: 4px;" id="sim-out-ltv">LTV: $0.00 &bull; 20 mo lifetime</div>
                 </div>
                 <div style="text-align: right;">
                   <div style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Simulated MRR</div>
@@ -482,9 +457,8 @@
                 <div style="display: flex; justify-content: space-between; font-size: 11px; flex-wrap: wrap; gap: 8px;">
                   <span>📞 Telephony: <strong style="color: #cbd5e1;" id="sim-cogs-twilio">$0.00</strong></span>
                   <span>⚡ Gemini AI: <strong style="color: #cbd5e1;" id="sim-cogs-gemini">$0.00</strong></span>
-                  <span>💬 SMS: <strong style="color: #cbd5e1;" id="sim-cogs-sms">$0.00</strong></span>
-                  <span>📱 Numbers: <strong style="color: #cbd5e1;" id="sim-cogs-numbers">$0.00</strong></span>
-                  <span>💳 Stripe: <strong style="color: #cbd5e1;" id="sim-cogs-stripe">$0.00</strong></span>
+                  <span>📱 Dedicated Numbers: <strong style="color: #cbd5e1;" id="sim-cogs-numbers">$0.00</strong></span>
+                  <span>💳 Stripe Merchant: <strong style="color: #cbd5e1;" id="sim-cogs-stripe">$0.00</strong></span>
                 </div>
               </div>
             </div>
@@ -512,6 +486,7 @@
           </div>
         </div>
       </section>
+
 
 
       <!-- Per-Tenant Performance & Profitability Ledger -->
