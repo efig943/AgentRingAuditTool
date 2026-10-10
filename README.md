@@ -1,8 +1,8 @@
 # AgentRing &mdash; Financials & Voice AI Call Audit System
 
-A dual-tier production platform for Voice AI receptionists:
-1. **Financials & Unit Economics Dashboard**: A real-time executive operations console reconciling live Stripe subscriptions, Twilio telephony, Gemini AI costs, gross profit margins, tenant ledgers, and interactive SaaS growth modeling.
-2. **Antigravity Audit Skills**: A decoupled, multi-skill agentic architecture (`call-logs`, `gcloud-logs`, and `call-audit-analyzer`) that diagnoses customer friction, conversational flow anomalies, database discrepancies, and cloud infrastructure dropouts.
+A production platform for Voice AI receptionists and operations:
+1. **Financials & Unit Economics Dashboard**: Real-time executive console reconciling live Stripe subscriptions, Twilio telephony, Gemini AI costs, gross profit margins, tenant ledgers, and interactive SaaS growth modeling.
+2. **Antigravity Multi-Agent Audit Suite**: Specialized, decoupled skills (`full-audit`, `db-audit`, `code-audit`, `call-logs`, `gcloud-logs`, `call-audit-analyzer`) that dissect the database, codebase, conversational voice records, and Google Cloud Run infrastructure backing `agentring.dev`.
 
 ---
 
@@ -10,20 +10,36 @@ A dual-tier production platform for Voice AI receptionists:
 
 ```
 callAuditAgent/
-├── .agents/skills/                       # Antigravity Specialized Agent Skills
-│   ├── call-logs/                        # Skill 1: Supabase PostgreSQL call records
-│   │   ├── SKILL.md                      # Skill runbook & progressive disclosure spec
-│   │   ├── scripts/fetch_call_logs.py    # CLI tool: fetch calls, transcripts, appointments
-│   │   └── references/schema.md          # PostgreSQL database schema documentation
-│   ├── gcloud-logs/                      # Skill 2: Google Cloud Run telemetry
-│   │   ├── SKILL.md                      # Skill runbook for infrastructure logs
-│   │   ├── scripts/fetch_gcloud_logs.py  # CLI tool: query & filter Cloud Run logs
-│   │   └── references/gcp_services.md    # Cloud Run architecture & log stream mappings
-│   └── call-audit-analyzer/              # Skill 3: Orchestrator / Multi-layer auditor
-│       ├── SKILL.md                      # Composite workflow: synthesizes call + cloud logs
-│       ├── scripts/save_audit_result.py  # Persistence CLI: writes findings into audits.db
-│       ├── references/audit_rubric.md    # Incident taxonomy & severity criteria
-│       └── examples/sample_audit_workflow.md # Step-by-step walkthrough for Call #114
+├── .agents/
+│   ├── rules/
+│   │   └── audit_agents.md               # Workspace chat integration rule & triggers
+│   └── skills/                           # Antigravity Specialized Agent Skills
+│       ├── full-audit/                   # Master Full-System Orchestrator
+│       │   ├── SKILL.md                  # Unified audit runbook
+│       │   └── scripts/run_full_audit.py # Master CLI runner & executive scorecard
+│       ├── db-audit/                     # PostgreSQL Database & Relational Auditor
+│       │   ├── SKILL.md                  # Database audit procedures
+│       │   ├── scripts/audit_database.py # CLI: queries all 9 tables, FKs, leaks, hygiene
+│       │   ├── references/audit_rules.md # Rule taxonomy (FK, SEC, COR, HYG, INT)
+│       │   └── examples/sample_audit_report.md
+│       ├── code-audit/                   # Code Quality, Security & Cloud Run Auditor
+│       │   ├── SKILL.md                  # Static analysis & deployment runbook
+│       │   ├── scripts/audit_codebase.py # CLI: AST syntax, secrets, requirements, Cloud Run
+│       │   ├── references/code_rules.md  # Rule taxonomy (SYN, SEC, DEP, ENV, GCP)
+│       │   └── examples/sample_code_audit.md
+│       ├── call-logs/                    # Voice Call Database Records
+│       │   ├── SKILL.md                  # Progressive disclosure call extractor
+│       │   ├── scripts/fetch_call_logs.py# CLI: fetch calls, transcripts, appointments
+│       │   └── references/schema.md      # PostgreSQL schema reference
+│       ├── gcloud-logs/                  # Google Cloud Run Infrastructure Logs
+│       │   ├── SKILL.md                  # Telemetry query procedures
+│       │   ├── scripts/fetch_gcloud_logs.py # CLI: Cloud Run log extractor
+│       │   └── references/gcp_services.md# Cloud Run architecture mappings
+│       └── call-audit-analyzer/          # Voice Call Diagnostic Orchestrator
+│           ├── SKILL.md                  # Synthesizes call transcripts + cloud telemetry
+│           ├── scripts/save_audit_result.py # Writes findings into local audits.db
+│           ├── references/audit_rubric.md# Incident taxonomy & severity criteria
+│           └── examples/sample_audit_workflow.md
 ├── app/                                  # Core application source code
 │   ├── core/
 │   │   └── config.py                     # Central environment, rates, and paths
@@ -32,14 +48,14 @@ callAuditAgent/
 │   │   └── storage.py                    # Local SQLite persistence (audits.db)
 │   ├── services/
 │   │   ├── financials.py                 # Live Stripe, Twilio, and GCP unit economics
-│   │   ├── auditor.py                    # Legacy auditor service
+│   │   ├── auditor.py                    # Auditor service
 │   │   ├── daemon.py                     # Background worker daemon
 │   │   └── email_service.py              # Gmail SMTP incident notification dispatch
 │   └── api/
 │       └── server.py                     # FastAPI application & API endpoints
-├── static/                               # Dedicated Financials Command Center UI
-│   ├── index.html                        # Single-page financial operations dashboard
-│   ├── styles.css                        # Modern dark-mode glassmorphism styling
+├── static/                               # Financials Command Center Web UI
+│   ├── index.html                        # Single-page operations dashboard
+│   ├── styles.css                        # Dark-mode glassmorphism styling
 │   └── app.js                            # Live polling, charts, and simulator engine
 ├── audits.db                             # Local SQLite database for audit findings
 ├── server.py                             # Root launcher script (runs uvicorn server)
@@ -51,102 +67,96 @@ callAuditAgent/
 
 ---
 
-## 💰 Financials & Unit Economics Command Center
+## 🛡️ Antigravity Multi-Agent Audit Constellation
 
-Runs locally at **[http://localhost:5050](http://localhost:5050)**.
-
-- **Live Provider Integration**:
-  - **Stripe Payments**: Real-time sync of available balance, gross collections, processing fees, and recent succeeded transactions with direct receipt links.
-  - **Twilio Telephony**: Live account balance, month-to-date voice spend, and account status.
-  - **Google Cloud & AI**: Active project linkage and transparent per-minute cost modeling ($0.075/min for Gemini Multimodal Live).
-- **Billing Cycle Direct COGS**:
-  - Reconciles actual database calls with Twilio Voice Inbound ($0.0140/min), Media Streams ($0.0040/min), Dual Recording ($0.0025/min), Gemini Live ($0.0750/min), Post-Call Transcription ($0.0025/call), QA Audits ($0.0008/call), and dedicated numbers ($1.15/mo).
-- **Unit Economics & P&L**:
-  - Displays blended cost per minute ($0.0955/min), average cost per call, gross profit, and gross profit margin percentage.
-  - Automatic team commission splits: 50% Founder, 30% Closer, 20% Cold Caller.
-- **Interactive Growth Simulator**:
-  - Model SaaS business metrics by adjusting sliders for paying tenants, calls/day, average duration, plan tiers (Starter, Growth, Scale), and infrastructure tiers.
-- **Per-Tenant Ledger**:
-  - Live breakdown of calls, billed minutes, base subscription revenue, direct COGS, net margin, and profitability per tenant.
-
----
-
-## 🛠️ Antigravity Audit Skills
-
-Call auditing is decoupled from the web UI and handled via Antigravity Skills located in [`.agents/skills/`](./.agents/skills/):
+All audit skills are natively integrated both **within the AI chat interface** and via **standalone CLI scripts**.
 
 ```
-                   ┌─────────────────────────┐
-                   │   call-audit-analyzer   │
-                   │   (Orchestrator Skill)  │
-                   └────────────┬────────────┘
-                                │
-                ┌───────────────┴───────────────┐
-                ▼                               ▼
-         ┌──────────────┐               ┌───────────────┐
-         │  call-logs   │               │  gcloud-logs  │
-         │ (PostgreSQL) │               │  (Cloud Run)  │
-         ├──────────────┤               ├───────────────┤
-         │ • Transcripts│               │ • HTTP Latency│
-         │ • Caller Info│               │ • 500 Errors  │
-         │ • Appts / DB │               │ • Socket Drops│
-         └──────┬───────┘               └───────┬───────┘
-                │                               │
-                └───────────────┬───────────────┘
-                                ▼
-                    ┌─────────────────────────┐
-                    │  Multi-Layer Diagnosis  │
-                    │   • Sentiment Analysis  │
-                    │   • DB Fidelity Check   │
-                    │   • Cloud Infrastructure│
-                    └───────────┬─────────────┘
-                                ▼
-                    ┌─────────────────────────┐
-                    │   save_audit_result.py  │
-                    │   • audits.db SQLite    │
-                    │   • Alert Email (opt)   │
-                    └─────────────────────────┘
+                     ┌───────────────────────────────┐
+                     │          full-audit           │
+                     │  (Master System Orchestrator) │
+                     └───────────────┬───────────────┘
+                                     │
+         ┌───────────────────────────┼───────────────────────────┐
+         ▼                           ▼                           ▼
+  ┌───────────────┐           ┌───────────────┐           ┌───────────────┐
+  │  code-audit   │           │   db-audit    │           │  call-logs &  │
+  │ (Code & GCP)  │           │ (PostgreSQL)  │           │  gcloud-logs  │
+  ├───────────────┤           ├───────────────┤           ├───────────────┤
+  │• AST & Syntax │           │• 9 Tables     │           │• 108 Calls    │
+  │• requirements │           │• Foreign Keys │           │• Transcripts  │
+  │• .env Parity  │           │• Tenant Leaks │           │• Cloud Run    │
+  │• Cloud Run    │           │• Hygiene/E.164│           │• Audits Sync  │
+  └───────┬───────┘           └───────┬───────┘           └───────┬───────┘
+          │                           │                           │
+          └───────────────────────────┼───────────────────────────┘
+                                      ▼
+                      ┌───────────────────────────────┐
+                      │ Master Synthesizer & Reporter │
+                      │   • Executive Scorecard       │
+                      │   • P0 Deployment Blockers    │
+                      │   • Domain Dissections        │
+                      │   • Actionable Fix Commands   │
+                      └───────────────────────────────┘
 ```
 
-### 1. `call-logs` Skill
-Extracts voice receptionist call records from Supabase PostgreSQL, parsing transcripts and joining correlated appointments and leads.
-
+### 1. `full-audit` (Master System Orchestrator)
+Coordinates all domain auditors, aggregates their findings, and outputs an executive scorecard.
 ```bash
-# Inspect a single call with human-readable summary
-python3 .agents/skills/call-logs/scripts/fetch_call_logs.py --call-id 114 --format summary
+python3 .agents/skills/full-audit/scripts/run_full_audit.py --format summary
+python3 .agents/skills/full-audit/scripts/run_full_audit.py --format markdown --export master_audit.md
+```
 
-# List recent unaudited calls
+### 2. `db-audit` (PostgreSQL Database & Relational Integrity)
+Connects to Supabase PostgreSQL, auditing all 9 tables for foreign key integrity, cross-tenant isolation leaks (`SEC-001`/`SEC-002`), candidate unlinked leads (`COR-003`), E.164 phone formats (`HYG-001`), JSON transcript validity, and expired OAuth tokens.
+```bash
+python3 .agents/skills/db-audit/scripts/audit_database.py --format summary
+python3 .agents/skills/db-audit/scripts/audit_database.py --table appointments
+python3 .agents/skills/db-audit/scripts/audit_database.py --fix-sql
+```
+
+### 3. `code-audit` (Codebase Quality, Security & Cloud Run Readiness)
+AST-based static analysis engine with zero external dependencies. Validates Python syntax, scans for hardcoded secrets/tokens, verifies dependency completeness in `requirements.txt`, checks `.env.example` coverage, and enforces Google Cloud Run deployment requirements for `agentring.dev` (`$PORT` binding, `.gcloudignore`, host binding).
+```bash
+python3 .agents/skills/code-audit/scripts/audit_codebase.py --format summary
+python3 .agents/skills/code-audit/scripts/audit_codebase.py --min-severity error
+python3 .agents/skills/code-audit/scripts/audit_codebase.py --path app/services/financials.py
+```
+
+### 4. `call-logs` & `call-audit-analyzer` (Conversational Voice AI)
+Extracts turn-by-turn dialogue from PostgreSQL, cross-correlates with Google Cloud Logging telemetry, evaluates customer sentiment, and verifies database appointment fidelity.
+```bash
+python3 .agents/skills/call-logs/scripts/fetch_call_logs.py --call-id 114 --format summary
 python3 .agents/skills/call-logs/scripts/fetch_call_logs.py --unaudited --limit 5 --format list
 ```
 
-### 2. `gcloud-logs` Skill
-Queries Google Cloud Logging for Cloud Run services (`ai-receptionist`, `ai-dashboard`) under project `ai-vp-506402`.
-
+### 5. `gcloud-logs` (Google Cloud Run Telemetry)
+Queries Google Cloud Logging for `ai-receptionist` and `ai-dashboard` under project `ai-vp-506402`.
 ```bash
-# Query logs around a specific call timestamp (+/- 5 min window)
 python3 .agents/skills/gcloud-logs/scripts/fetch_gcloud_logs.py --service ai-receptionist --around "2026-10-03T15:15:08Z" --window-minutes 5
-
-# Check for backend errors in the past 24 hours
-python3 .agents/skills/gcloud-logs/scripts/fetch_gcloud_logs.py --service all --severity ERROR --since 24h
 ```
 
-### 3. `call-audit-analyzer` Skill (Orchestrator)
-Synthesizes application dialogue with backend telemetry to perform root-cause incident analyses, saving structured results directly into `audits.db`.
+---
 
-```bash
-# Save an audit verdict to audits.db
-python3 .agents/skills/call-audit-analyzer/scripts/save_audit_result.py << 'EOF'
-{
-  "call_id": 114,
-  "status": "CLEAN",
-  "has_issues": false,
-  "summary": "Customer successfully scheduled sink repair; database row matches intent.",
-  "customer_sentiment": "Positive",
-  "incident_report": "Natural conversation flow with zero anomalies.",
-  "recommended_action": "None required."
-}
-EOF
-```
+## 💬 Interactive Chat Integration
+
+You can trigger any audit directly in the Antigravity chat:
+
+- *"Run a full audit"* &mdash; Dissects code, database, calls, and cloud logs, pasting the unified Master Scorecard.
+- *"Audit the database"* &mdash; Inspects all 9 tables, foreign keys, and multi-tenant isolation.
+- *"Audit the code"* &mdash; Checks syntax, dependencies, secrets, and Cloud Run readiness.
+- *"Audit call #114"* &mdash; Cross-references transcript, customer sentiment, and Cloud Run logs.
+
+---
+
+## 💰 Financials & Unit Economics Command Center
+
+Runs locally at **[http://localhost:5050](http://localhost:5050)** (or `$PORT` on Cloud Run).
+
+- **Live Provider Integration**: Real-time sync of Stripe payments, Twilio voice balances/rates, and GCP project billing.
+- **Unit Economics**: Calculates direct COGS ($0.0955/min blended rate), average call cost, gross margin, and team commission splits.
+- **Interactive Growth Simulator**: Adjust sliders for clients, call volumes, call durations, and plan tiers (Starter, Growth, Scale).
+- **Per-Tenant Ledger**: Detailed P&L breakdown by business tenant.
 
 ---
 
@@ -154,20 +164,16 @@ EOF
 
 ### 1. Launch the Financials Dashboard
 ```bash
-cd /Users/figster/Desktop/practice/callAuditAgent
 ./start.sh
-```
-Or directly:
-```bash
-python3 server.py
+# or: python3 server.py
 ```
 Open **[http://localhost:5050](http://localhost:5050)** in your browser.
 
-### 2. Run Audits via Antigravity Agent
-Simply ask in the AI chat:
-- *"Audit call #114"*
-- *"Find unaudited calls and audit them"*
-- *"Check if call #115 dropped due to a Cloud Run backend error"*
+### 2. Run Audits from CLI
+```bash
+# Run Master Full System Audit
+python3 .agents/skills/full-audit/scripts/run_full_audit.py
+```
 
 ---
 
@@ -179,4 +185,4 @@ Simply ask in the AI chat:
 - `TWILIO_AUTH_TOKEN`: Twilio API token for live balance and billing records.
 - `GEMINI_API_KEY`: Google GenAI API key.
 - `ALERT_RECIPIENT_EMAIL`: Incident email alert destination (`ethan.figueredo943@gmail.com`).
-- `DASHBOARD_PORT`: Local server port (default: `5050`).
+- `DASHBOARD_PORT`: Local server port (default: `5050`, or auto-reads `$PORT` on Cloud Run).
