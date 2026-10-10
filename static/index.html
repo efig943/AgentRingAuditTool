@@ -289,7 +289,7 @@
             </p>
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
-            <button type="button" id="sim-btn-live-sync" class="sim-preset-btn" style="background: rgba(16, 185, 129, 0.15) !important; border-color: rgba(16, 185, 129, 0.4) !important; color: #6ee7b7 !important;">
+            <button type="button" id="sim-btn-live-sync" onclick="syncLiveTelemetryPreset()" class="sim-preset-btn" style="background: rgba(16, 185, 129, 0.15) !important; border-color: rgba(16, 185, 129, 0.4) !important; color: #6ee7b7 !important;">
               <span>⚡</span> Pull Live Telemetry from DB
             </button>
             <span class="status-tag" style="background: rgba(99,102,241,0.2); color: #818cf8;">Telemetry Calibrated</span>
@@ -299,19 +299,19 @@
         <!-- 1-Click Production Scenario Presets -->
         <div style="margin-bottom: 22px; padding: 12px 16px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <span style="font-size: 12px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">⚡ Quick Presets:</span>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="2" data-calls="4.9" data-duration="1.0" data-plan="growth" data-transfer="1">
+          <button type="button" id="sim-preset-baseline" onclick="applySimPreset(this)" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="2" data-calls="4.9" data-duration="1.0" data-plan="growth" data-transfer="1">
             📍 Current Baseline (2 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn active" data-tenants="10" data-calls="5.0" data-duration="1.0" data-plan="growth" data-transfer="1">
+          <button type="button" id="sim-preset-growth" onclick="applySimPreset(this)" class="btn btn-secondary btn-sm sim-preset-btn active" data-tenants="10" data-calls="5.0" data-duration="1.0" data-plan="growth" data-transfer="1">
             📈 Growth Target (10 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="15" data-calls="12.0" data-duration="1.1" data-plan="growth" data-transfer="5">
+          <button type="button" id="sim-preset-trades" onclick="applySimPreset(this)" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="15" data-calls="12.0" data-duration="1.1" data-plan="growth" data-transfer="5">
             🔧 Emergency Trades (15 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="25" data-calls="6.5" data-duration="1.8" data-plan="scale" data-transfer="8">
+          <button type="button" id="sim-preset-pro" onclick="applySimPreset(this)" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="25" data-calls="6.5" data-duration="1.8" data-plan="scale" data-transfer="8">
             ⚖️ Professional Services (25 Clients)
           </button>
-          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="50" data-calls="7.0" data-duration="1.0" data-plan="blended" data-transfer="3">
+          <button type="button" id="sim-preset-scale" onclick="applySimPreset(this)" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="50" data-calls="7.0" data-duration="1.0" data-plan="blended" data-transfer="3">
             🚀 Agency Scale (50 Clients)
           </button>
         </div>
@@ -336,7 +336,7 @@
                 <span>Typical reception range</span>
                 <span>PostgreSQL DB Avg: <strong style="color: #38bdf8;">4.9 / day</strong></span>
               </div>
-              <input type="range" id="sim-slider-calls" min="1" max="30" value="5.0" step="0.5" class="sim-range">
+              <input type="range" id="sim-slider-calls" min="1" max="30" value="5.0" step="0.1" class="sim-range">
             </div>
 
             <div>
@@ -566,6 +566,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="/static/app.js?v=20261007_fin"></script>
+  <script src="/static/app.js?v=20261010_1945"></script>
 </body>
 </html>

@@ -78,70 +78,14 @@ function initEventListeners() {
   document.querySelectorAll('.sim-preset-btn').forEach(btn => {
     if (btn.id === 'sim-btn-live-sync') return;
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const t = btn.dataset.tenants;
-      const c = btn.dataset.calls;
-      const d = btn.dataset.duration;
-      const p = btn.dataset.plan;
-      const tr = btn.dataset.transfer;
-
-      if (t && simTenantsSlider) { simTenantsSlider.value = t; const badge = document.getElementById('sim-badge-tenants'); if (badge) badge.innerText = `${t} clients`; }
-      if (c && simCallsSlider) { simCallsSlider.value = c; const badge = document.getElementById('sim-badge-calls'); if (badge) badge.innerText = `${parseFloat(c).toFixed(1)} calls/day`; }
-      if (d && simDurationSlider) { simDurationSlider.value = d; const badge = document.getElementById('sim-badge-duration'); if (badge) badge.innerText = `${parseFloat(d).toFixed(1)} mins`; }
-      if (p && simPlanSelect) { simPlanSelect.value = p; }
-      if (tr && simTransferSlider) { simTransferSlider.value = tr; const badge = document.getElementById('sim-badge-transfer'); if (badge) badge.innerText = `${tr}%`; }
-
-      runFinancialSimulation();
+      window.applySimPreset(btn);
     });
   });
 
   // Pull Live Telemetry from Production DB
   if (simBtnLiveSync) {
-    simBtnLiveSync.addEventListener('click', async () => {
-      try {
-        simBtnLiveSync.innerHTML = '<span>⏳</span> Syncing...';
-        const res = await fetch('/api/financials');
-        if (!res.ok) throw new Error('Failed to fetch live financials');
-        const data = await res.json();
-        const d = data.telemetry_defaults || {};
-
-        if (d.tenants_count && simTenantsSlider) {
-          simTenantsSlider.value = d.tenants_count;
-          const badge = document.getElementById('sim-badge-tenants');
-          if (badge) badge.innerText = `${d.tenants_count} clients`;
-        }
-        if (d.calls_per_day_per_tenant && simCallsSlider) {
-          simCallsSlider.value = d.calls_per_day_per_tenant;
-          const badge = document.getElementById('sim-badge-calls');
-          if (badge) badge.innerText = `${parseFloat(d.calls_per_day_per_tenant).toFixed(1)} calls/day`;
-        }
-        if (d.avg_call_minutes && simDurationSlider) {
-          simDurationSlider.value = d.avg_call_minutes;
-          const badge = document.getElementById('sim-badge-duration');
-          if (badge) badge.innerText = `${parseFloat(d.avg_call_minutes).toFixed(1)} mins`;
-        }
-        if (d.transfer_to_human_pct !== undefined && simTransferSlider) {
-          simTransferSlider.value = Math.round(d.transfer_to_human_pct);
-          const badge = document.getElementById('sim-badge-transfer');
-          if (badge) badge.innerText = `${Math.round(d.transfer_to_human_pct)}%`;
-        }
-        if (d.plan_tier && simPlanSelect) {
-          simPlanSelect.value = d.plan_tier;
-        }
-
-        document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
-        const baselineBtn = document.querySelector('.sim-preset-btn[data-tenants="2"]');
-        if (baselineBtn) baselineBtn.classList.add('active');
-
-        runFinancialSimulation();
-        simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
-        showToast(`Telemetry Synced: ${d.total_db_calls || 103} calls, ${d.total_db_leads || 52} leads, ${d.total_db_appointments || 6} appts!`, 'success');
-      } catch (err) {
-        console.error('Error syncing telemetry:', err);
-        simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
-        showToast('Error syncing telemetry defaults', 'error');
-      }
+    simBtnLiveSync.addEventListener('click', () => {
+      window.syncLiveTelemetryPreset();
     });
   }
 
@@ -157,6 +101,111 @@ function initEventListeners() {
     });
   }
 }
+
+// Global Scenario Preset Handler (Invoked via HTML onclick and event listeners)
+window.applySimPreset = function(target) {
+  const btn = (typeof target === 'string') ? document.getElementById(target) : target;
+  if (!btn) return;
+
+  // Toggle active class across preset scenario buttons
+  document.querySelectorAll('.sim-preset-btn').forEach(b => {
+    if (b.id !== 'sim-btn-live-sync') b.classList.remove('active');
+  });
+  btn.classList.add('active');
+
+  const t = btn.dataset.tenants || btn.getAttribute('data-tenants');
+  const c = btn.dataset.calls || btn.getAttribute('data-calls');
+  const d = btn.dataset.duration || btn.getAttribute('data-duration');
+  const p = btn.dataset.plan || btn.getAttribute('data-plan');
+  const tr = btn.dataset.transfer || btn.getAttribute('data-transfer');
+
+  const simTenantsSlider = document.getElementById('sim-slider-tenants');
+  const simCallsSlider = document.getElementById('sim-slider-calls');
+  const simDurationSlider = document.getElementById('sim-slider-duration');
+  const simTransferSlider = document.getElementById('sim-slider-transfer');
+  const simPlanSelect = document.getElementById('sim-select-plan');
+
+  if (t !== undefined && simTenantsSlider) {
+    simTenantsSlider.value = t;
+    const badge = document.getElementById('sim-badge-tenants');
+    if (badge) badge.innerText = `${t} clients`;
+  }
+  if (c !== undefined && simCallsSlider) {
+    simCallsSlider.value = c;
+    const badge = document.getElementById('sim-badge-calls');
+    if (badge) badge.innerText = `${parseFloat(c).toFixed(1)} calls/day`;
+  }
+  if (d !== undefined && simDurationSlider) {
+    simDurationSlider.value = d;
+    const badge = document.getElementById('sim-badge-duration');
+    if (badge) badge.innerText = `${parseFloat(d).toFixed(1)} mins`;
+  }
+  if (p && simPlanSelect) {
+    simPlanSelect.value = p;
+  }
+  if (tr !== undefined && simTransferSlider) {
+    simTransferSlider.value = tr;
+    const badge = document.getElementById('sim-badge-transfer');
+    if (badge) badge.innerText = `${tr}%`;
+  }
+
+  runFinancialSimulation();
+};
+
+window.syncLiveTelemetryPreset = async function() {
+  const simBtnLiveSync = document.getElementById('sim-btn-live-sync');
+  const simTenantsSlider = document.getElementById('sim-slider-tenants');
+  const simCallsSlider = document.getElementById('sim-slider-calls');
+  const simDurationSlider = document.getElementById('sim-slider-duration');
+  const simTransferSlider = document.getElementById('sim-slider-transfer');
+  const simPlanSelect = document.getElementById('sim-select-plan');
+
+  try {
+    if (simBtnLiveSync) simBtnLiveSync.innerHTML = '<span>⏳</span> Syncing...';
+    const res = await fetch('/api/financials');
+    if (!res.ok) throw new Error('Failed to fetch live financials');
+    const data = await res.json();
+    const d = data.telemetry_defaults || {};
+
+    if (d.tenants_count && simTenantsSlider) {
+      simTenantsSlider.value = d.tenants_count;
+      const badge = document.getElementById('sim-badge-tenants');
+      if (badge) badge.innerText = `${d.tenants_count} clients`;
+    }
+    if (d.calls_per_day_per_tenant && simCallsSlider) {
+      simCallsSlider.value = d.calls_per_day_per_tenant;
+      const badge = document.getElementById('sim-badge-calls');
+      if (badge) badge.innerText = `${parseFloat(d.calls_per_day_per_tenant).toFixed(1)} calls/day`;
+    }
+    if (d.avg_call_minutes && simDurationSlider) {
+      simDurationSlider.value = d.avg_call_minutes;
+      const badge = document.getElementById('sim-badge-duration');
+      if (badge) badge.innerText = `${parseFloat(d.avg_call_minutes).toFixed(1)} mins`;
+    }
+    if (d.transfer_to_human_pct !== undefined && simTransferSlider) {
+      simTransferSlider.value = Math.round(d.transfer_to_human_pct);
+      const badge = document.getElementById('sim-badge-transfer');
+      if (badge) badge.innerText = `${Math.round(d.transfer_to_human_pct)}%`;
+    }
+    if (d.plan_tier && simPlanSelect) {
+      simPlanSelect.value = d.plan_tier;
+    }
+
+    document.querySelectorAll('.sim-preset-btn').forEach(b => {
+      if (b.id !== 'sim-btn-live-sync') b.classList.remove('active');
+    });
+    const baselineBtn = document.getElementById('sim-preset-baseline') || document.querySelector('.sim-preset-btn[data-tenants="2"]');
+    if (baselineBtn) baselineBtn.classList.add('active');
+
+    runFinancialSimulation();
+    if (simBtnLiveSync) simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
+    showToast(`Telemetry Synced: ${d.total_db_calls || 103} calls, ${d.total_db_leads || 52} leads!`, 'success');
+  } catch (err) {
+    console.error('Error syncing telemetry:', err);
+    if (simBtnLiveSync) simBtnLiveSync.innerHTML = '<span>⚡</span> Pull Live Telemetry from DB';
+    showToast('Error syncing telemetry defaults', 'error');
+  }
+};
 
 // Toast notification helper
 function showToast(message, type = 'info') {
