@@ -701,30 +701,47 @@ def get_financial_summary() -> Dict[str, Any]:
         conn.close()
 
 def simulate_projections(
-    tenants_count: int = 25,
+    tenants_count: int = 10,
     plan_tier: str = "growth",
-    calls_per_day_per_tenant: int = 10,
-    avg_call_minutes: float = 2.0,
+    calls_per_day_per_tenant: float = 5.0,
+    avg_call_minutes: float = 0.8,
+    sms_followup_pct: float = 0.50,
+    transfer_to_human_pct: float = 0.05,
     infra_tier: str = "free"
 ) -> Dict[str, Any]:
     """
-    Interactive SaaS business financial simulator with comprehensive COGS:
-    Includes Twilio Voice, Streams, Recording, Gemini Live, Transcription,
-    Audit QA, Phone Numbers, Stripe Fees, and Infrastructure.
+    Interactive SaaS business financial simulator grounded in real production telemetry:
+    - Base Telephony: Twilio Voice ($0.0085/min), Streams ($0.0040/min), Recording ($0.0025/min)
+    - Live AI: Gemini 3.8 Live audio tokens ($0.0300/min), Transcription ($0.0025/call), QA ($0.0008/call)
+    - Outbound Followups: Lead Confirmation SMS ($0.0129/msg based on 50% lead capture rate)
+    - Transfers: Staff forward leg via Twilio <Dial> ($0.0140/min)
+    - Merchant Fees: Stripe 2.9% + $0.30 per subscriber
+    - Phone Numbers: $1.15/mo per active tenant
     """
-    plan = PLAN_TIERS.get(plan_tier.lower(), PLAN_TIERS["growth"])
-    monthly_plan_price = plan["price"]
-    included_mins_per_tenant = plan["included_minutes"]
-    overage_rate = plan["overage_rate"]
+    tier_key = str(plan_tier).lower()
+    if tier_key == "blended":
+        # Blended SaaS portfolio mix: 60% Growth, 30% Starter, 10% Scale
+        monthly_plan_price = round(0.60 * 150.0 + 0.30 * 49.0 + 0.10 * 299.0, 2)  # $134.60
+        included_mins_per_tenant = int(round(0.60 * 450 + 0.30 * 150 + 0.10 * 1000)) # 415 mins
+        overage_rate = 0.30
+        plan_display_name = "Blended Portfolio (60% Growth, 30% Starter, 10% Scale)"
+    else:
+        plan = PLAN_TIERS.get(tier_key, PLAN_TIERS["growth"])
+        monthly_plan_price = plan["price"]
+        included_mins_per_tenant = plan["included_minutes"]
+        overage_rate = plan["overage_rate"]
+        plan_display_name = plan["name"]
 
     # Usage Projections (30 days/month)
-    total_calls_month = tenants_count * calls_per_day_per_tenant * 30
+    total_calls_month = int(round(tenants_count * calls_per_day_per_tenant * 30))
     total_minutes_month = round(total_calls_month * avg_call_minutes, 1)
-    # Twilio bills in whole-minute increments; with average call duration, billed minutes is slightly higher
-    billed_minutes_month = round(total_calls_month * math.ceil(avg_call_minutes), 1)
+
+    # Smooth whole-minute ceiling telephony overhead matching actual DB distribution
+    avg_ceil_factor = max(1.0, avg_call_minutes + 0.35) if avg_call_minutes < 1.0 else (avg_call_minutes + 0.40)
+    billed_minutes_month = round(total_calls_month * avg_ceil_factor, 1)
 
     # Subscription Revenue
-    base_mrr = tenants_count * monthly_plan_price
+    base_mrr = round(tenants_count * monthly_plan_price, 2)
 
     # Overage Revenue
     total_included_minutes = tenants_count * included_mins_per_tenant
@@ -735,12 +752,16 @@ def simulate_projections(
     total_arr = round(total_mrr * 12, 2)
 
     # Comprehensive COGS Calculation
-    # 1. Telephony: Voice + Media Streams + Recording
+    # 1. Telephony: Inbound Voice + Media Streams + Recording + Dedicated Numbers + Human Transfers
     twilio_voice = round(billed_minutes_month * COST_RATES["twilio_voice_per_min"], 2)
+    twilio_recording = round(billed_minutes_month * COST_RATES["twilio_recording_per_min"], 2)
     twilio_streams = round(total_minutes_month * COST_RATES["twilio_streams_per_min"], 2)
-    twilio_recording = round(total_minutes_month * COST_RATES["twilio_recording_per_min"], 2)
+    
+    transferred_calls = int(round(total_calls_month * transfer_to_human_pct))
+    transferred_minutes = round(transferred_calls * avg_call_minutes, 1)
+    twilio_transfers = round(transferred_minutes * 0.0140, 2)
     twilio_numbers = round(tenants_count * COST_RATES["phone_number_monthly"], 2)
-    total_twilio_cost = round(twilio_voice + twilio_streams + twilio_recording + twilio_numbers, 2)
+    total_twilio_cost = round(twilio_voice + twilio_recording + twilio_streams + twilio_transfers + twilio_numbers, 2)
 
     # 2. AI: Gemini Live + Transcription + Audit
     gemini_live = round(total_minutes_month * COST_RATES["gemini_live_per_min"], 2)
@@ -748,17 +769,26 @@ def simulate_projections(
     gemini_audit = round(total_calls_month * COST_RATES["gemini_audit_per_call"], 2)
     total_gemini_cost = round(gemini_live + gemini_transcription + gemini_audit, 2)
 
-    # 3. Payment Gateway: Stripe merchant fees (2.9% + $0.30 per subscriber)
+    # 3. Outbound SMS: Lead notifications & booking confirmations (carrier fee included)
+    sms_count = int(round(total_calls_month * sms_followup_pct))
+    total_sms_cost = round(sms_count * COST_RATES["sms_cost_per_msg"], 2)
+
+    # 4. Payment Gateway: Stripe merchant fees (2.9% + $0.30 per subscriber)
     stripe_fee_per_sub = round(monthly_plan_price * COST_RATES["stripe_fee_pct"] + COST_RATES["stripe_fee_fixed"], 2)
     total_stripe_fees = round(tenants_count * stripe_fee_per_sub, 2)
 
-    # 4. Infrastructure
+    # 5. Infrastructure
     infra_cost = 0.00 if str(infra_tier).lower() == "free" else 25.00
 
-    # Total COGS
-    total_cogs = round(total_twilio_cost + total_gemini_cost + total_stripe_fees + infra_cost, 2)
+    # Direct Telephony & AI Cost (before merchant fees & hosting)
+    direct_voice_ai_cost = round(total_twilio_cost + total_gemini_cost + total_sms_cost, 2)
+    total_cogs = round(direct_voice_ai_cost + total_stripe_fees + infra_cost, 2)
+    
     gross_profit = round(total_mrr - total_cogs, 2)
     margin_pct = round((gross_profit / total_mrr * 100), 1) if total_mrr > 0 else 0.0
+    profit_per_client = round(gross_profit / tenants_count, 2) if tenants_count > 0 else 0.0
+    cost_per_call = round(total_cogs / total_calls_month, 4) if total_calls_month > 0 else 0.0
+    voice_ai_cost_per_call = round(direct_voice_ai_cost / total_calls_month, 4) if total_calls_month > 0 else 0.0
 
     # Team Split (50% Founder, 30% Closer, 20% Cold Caller)
     founder_payout = round(max(0, gross_profit * 0.50), 2)
@@ -768,9 +798,11 @@ def simulate_projections(
     return {
         "inputs": {
             "tenants_count": tenants_count,
-            "plan_tier": plan["name"],
+            "plan_tier": plan_display_name,
             "calls_per_day_per_tenant": calls_per_day_per_tenant,
-            "avg_call_minutes": avg_call_minutes
+            "avg_call_minutes": avg_call_minutes,
+            "sms_followup_pct": sms_followup_pct,
+            "transfer_to_human_pct": transfer_to_human_pct
         },
         "volume": {
             "monthly_calls": total_calls_month,
@@ -788,21 +820,27 @@ def simulate_projections(
             "twilio_voice": twilio_voice,
             "twilio_streams": twilio_streams,
             "twilio_recording": twilio_recording,
+            "twilio_transfers": twilio_transfers,
             "twilio_numbers": twilio_numbers,
             "total_twilio": total_twilio_cost,
             "gemini_live": gemini_live,
             "gemini_transcription": gemini_transcription,
             "gemini_audit": gemini_audit,
             "total_gemini": total_gemini_cost,
+            "sms_count": sms_count,
+            "sms_fees": total_sms_cost,
             "stripe_fees": total_stripe_fees,
             "infrastructure": infra_cost,
+            "direct_voice_ai": direct_voice_ai_cost,
             "total_cogs": total_cogs
         },
         "profitability": {
             "gross_profit": gross_profit,
             "margin_pct": margin_pct,
+            "profit_per_client": profit_per_client,
             "cost_per_minute": round(total_cogs / total_minutes_month, 4) if total_minutes_month > 0 else 0.0,
-            "cost_per_call": round(total_cogs / total_calls_month, 4) if total_calls_month > 0 else 0.0
+            "cost_per_call": cost_per_call,
+            "voice_ai_cost_per_call": voice_ai_cost_per_call
         },
         "team_splits": {
             "founder_50": founder_payout,

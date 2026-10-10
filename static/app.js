@@ -64,6 +64,47 @@ function initEventListeners() {
     });
   }
 
+  // Preset Buttons Listener
+  document.querySelectorAll('.sim-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.sim-preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const t = btn.dataset.tenants;
+      const c = btn.dataset.calls;
+      const d = btn.dataset.duration;
+      const p = btn.dataset.plan;
+      const s = btn.dataset.sms;
+      const tr = btn.dataset.transfer;
+
+      if (t && simTenantsSlider) { simTenantsSlider.value = t; const badge = document.getElementById('sim-badge-tenants'); if (badge) badge.innerText = `${t} clients`; }
+      if (c && simCallsSlider) { simCallsSlider.value = c; const badge = document.getElementById('sim-badge-calls'); if (badge) badge.innerText = `${c} calls/day`; }
+      if (d && simDurationSlider) { simDurationSlider.value = d; const badge = document.getElementById('sim-badge-duration'); if (badge) badge.innerText = `${parseFloat(d).toFixed(1)} mins`; }
+      if (p && simPlanSelect) { simPlanSelect.value = p; }
+      if (s && document.getElementById('sim-slider-sms')) { document.getElementById('sim-slider-sms').value = s; const badge = document.getElementById('sim-badge-sms'); if (badge) badge.innerText = `${s}%`; }
+      if (tr && document.getElementById('sim-slider-transfer')) { document.getElementById('sim-slider-transfer').value = tr; const badge = document.getElementById('sim-badge-transfer'); if (badge) badge.innerText = `${tr}%`; }
+
+      runFinancialSimulation();
+    });
+  });
+
+  const simSmsSlider = document.getElementById('sim-slider-sms');
+  if (simSmsSlider) {
+    simSmsSlider.addEventListener('input', (e) => {
+      const badge = document.getElementById('sim-badge-sms');
+      if (badge) badge.innerText = `${e.target.value}%`;
+      runFinancialSimulation();
+    });
+  }
+
+  const simTransferSlider = document.getElementById('sim-slider-transfer');
+  if (simTransferSlider) {
+    simTransferSlider.addEventListener('input', (e) => {
+      const badge = document.getElementById('sim-badge-transfer');
+      if (badge) badge.innerText = `${e.target.value}%`;
+      runFinancialSimulation();
+    });
+  }
+
   if (simPlanSelect) {
     simPlanSelect.addEventListener('change', () => {
       runFinancialSimulation();
@@ -332,10 +373,12 @@ async function loadFinancials() {
 async function runFinancialSimulation() {
   clearTimeout(simTimeout);
   simTimeout = setTimeout(async () => {
-    const tenantsCount = parseInt(document.getElementById('sim-slider-tenants')?.value, 10) || 25;
+    const tenantsCount = parseInt(document.getElementById('sim-slider-tenants')?.value, 10) || 10;
     const planTier = document.getElementById('sim-select-plan')?.value || 'growth';
-    const callsPerDay = parseInt(document.getElementById('sim-slider-calls')?.value, 10) || 10;
-    const avgMinutes = parseFloat(document.getElementById('sim-slider-duration')?.value) || 2.0;
+    const callsPerDay = parseFloat(document.getElementById('sim-slider-calls')?.value) || 5.0;
+    const avgMinutes = parseFloat(document.getElementById('sim-slider-duration')?.value) || 0.8;
+    const smsRate = (parseFloat(document.getElementById('sim-slider-sms')?.value) || 50) / 100.0;
+    const transferRate = (parseFloat(document.getElementById('sim-slider-transfer')?.value) || 5) / 100.0;
     const infraTier = document.getElementById('sim-select-infra')?.value || 'free';
 
     try {
@@ -347,6 +390,8 @@ async function runFinancialSimulation() {
           plan_tier: planTier,
           calls_per_day_per_tenant: callsPerDay,
           avg_call_minutes: avgMinutes,
+          sms_followup_pct: smsRate,
+          transfer_to_human_pct: transferRate,
           infra_tier: infraTier
         })
       });
@@ -365,13 +410,25 @@ async function runFinancialSimulation() {
 
       if (document.getElementById('sim-out-profit')) document.getElementById('sim-out-profit').innerText = fmtMoney(prof.gross_profit);
       if (document.getElementById('sim-out-margin')) document.getElementById('sim-out-margin').innerText = `Gross Margin: ${prof.margin_pct}%`;
+      if (document.getElementById('sim-out-profit-client')) document.getElementById('sim-out-profit-client').innerText = `${fmtMoney(prof.profit_per_client)} / client / mo`;
+      
       if (document.getElementById('sim-out-mrr')) document.getElementById('sim-out-mrr').innerText = fmtMoney(rev.total_mrr);
-      if (document.getElementById('sim-out-arr')) document.getElementById('sim-out-arr').innerText = `ARR: ${fmtMoney(rev.total_arr)}`;
+      if (document.getElementById('sim-out-arr')) {
+        const overageStr = rev.overage_revenue > 0 ? ` + ${fmtMoney(rev.overage_revenue)} overage` : '';
+        document.getElementById('sim-out-arr').innerText = `ARR: ${fmtMoney(rev.total_arr)} (Base: ${fmtMoney(rev.base_mrr)}${overageStr})`;
+      }
 
       if (document.getElementById('sim-out-calls')) document.getElementById('sim-out-calls').innerText = fmtInt(vol.monthly_calls);
       if (document.getElementById('sim-out-minutes')) document.getElementById('sim-out-minutes').innerText = `${fmtInt(vol.billed_minutes || vol.monthly_minutes)}m`;
       if (document.getElementById('sim-out-cogs')) document.getElementById('sim-out-cogs').innerText = fmtMoney(costs.total_cogs);
-      if (document.getElementById('sim-out-cost-min')) document.getElementById('sim-out-cost-min').innerText = `$${Number(prof.cost_per_minute || 0).toFixed(4)}`;
+      if (document.getElementById('sim-out-cost-call')) document.getElementById('sim-out-cost-call').innerText = `$${Number(prof.cost_per_call || 0).toFixed(3)} / call`;
+
+      // Granular COGS Breakdown
+      if (document.getElementById('sim-cogs-twilio')) document.getElementById('sim-cogs-twilio').innerText = fmtMoney(costs.total_twilio);
+      if (document.getElementById('sim-cogs-gemini')) document.getElementById('sim-cogs-gemini').innerText = fmtMoney(costs.total_gemini);
+      if (document.getElementById('sim-cogs-sms')) document.getElementById('sim-cogs-sms').innerText = fmtMoney(costs.sms_fees);
+      if (document.getElementById('sim-cogs-numbers')) document.getElementById('sim-cogs-numbers').innerText = fmtMoney(costs.twilio_numbers);
+      if (document.getElementById('sim-cogs-stripe')) document.getElementById('sim-cogs-stripe').innerText = fmtMoney(costs.stripe_fees);
 
       // Team splits
       if (document.getElementById('sim-split-founder')) document.getElementById('sim-split-founder').innerText = fmtMoney(splits.founder_50);

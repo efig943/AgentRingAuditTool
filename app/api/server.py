@@ -47,10 +47,12 @@ class ResolveRequest(BaseModel):
     resolved: bool = True
 
 class SimulationRequest(BaseModel):
-    tenants_count: int = 25
+    tenants_count: int = 10
     plan_tier: str = "growth"
-    calls_per_day_per_tenant: int = 10
-    avg_call_minutes: float = 2.0
+    calls_per_day_per_tenant: float = 5.0
+    avg_call_minutes: float = 0.8
+    sms_followup_pct: Optional[float] = 0.50
+    transfer_to_human_pct: Optional[float] = 0.05
     infra_tier: Optional[str] = "free"
 
 @app.on_event("startup")
@@ -227,6 +229,8 @@ def simulate_financials_endpoint(req: SimulationRequest):
             plan_tier=req.plan_tier,
             calls_per_day_per_tenant=req.calls_per_day_per_tenant,
             avg_call_minutes=req.avg_call_minutes,
+            sms_followup_pct=req.sms_followup_pct if req.sms_followup_pct is not None else 0.50,
+            transfer_to_human_pct=req.transfer_to_human_pct if req.transfer_to_human_pct is not None else 0.05,
             infra_tier=req.infra_tier or "free"
         )
     except Exception as e:

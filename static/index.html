@@ -279,59 +279,106 @@
 
       <!-- Growth & Capacity Interactive Financial Simulator -->
       <section class="glass-panel" style="padding: 24px; border-left: 4px solid #6366f1;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px;">
           <div>
             <h3 style="font-size: 17px; color: #fff; display: flex; align-items: center; gap: 8px;">
               <span>🚀</span> Growth &amp; Capacity Financial Simulator
             </h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">
-              Model SaaS revenue, API direct costs, gross margins, and team commission splits as you scale.
+              Model SaaS revenue, Twilio/Gemini API spend, lead SMS followups, and team commission distributions.
             </p>
           </div>
-          <span class="status-tag" style="background: rgba(99,102,241,0.2); color: #818cf8;">Real-Time Calculator</span>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <span class="status-tag" style="background: rgba(99,102,241,0.2); color: #818cf8;">Telemetry Calibrated</span>
+          </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 32px;">
+        <!-- 1-Click Production Scenario Presets -->
+        <div style="margin-bottom: 22px; padding: 12px 16px; background: rgba(0, 0, 0, 0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 12px; font-weight: 700; color: #cbd5e1; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 4px;">⚡ Quick Presets:</span>
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="2" data-calls="5" data-duration="0.8" data-plan="growth" data-sms="50" data-transfer="5">
+            📍 Current Baseline (2 Clients)
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn active" data-tenants="10" data-calls="5" data-duration="0.8" data-plan="growth" data-sms="50" data-transfer="5">
+            📈 Growth Target (10 Clients)
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="25" data-calls="6" data-duration="1.0" data-plan="growth" data-sms="50" data-transfer="5">
+            🏢 Scale Milestone (25 Clients)
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm sim-preset-btn" data-tenants="50" data-calls="8" data-duration="1.2" data-plan="scale" data-sms="60" data-transfer="8">
+            🚀 Agency Enterprise (50 Clients)
+          </button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.1fr 1.35fr; gap: 32px;">
           <!-- Controls Column -->
-          <div style="display: flex; flex-direction: column; gap: 18px;">
+          <div style="display: flex; flex-direction: column; gap: 16px;">
             <div>
               <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                <label style="color: #fff; font-weight: 600;">Active Paying Tenants</label>
-                <span class="sim-badge" id="sim-badge-tenants">25 clients</span>
+                <label style="color: #fff; font-weight: 600;">Active Paying Clients</label>
+                <span class="sim-badge" id="sim-badge-tenants">10 clients</span>
               </div>
-              <input type="range" id="sim-slider-tenants" min="1" max="100" value="25" class="sim-range">
+              <input type="range" id="sim-slider-tenants" min="1" max="100" value="10" class="sim-range">
             </div>
 
             <div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
-                <label style="color: #fff; font-weight: 600;">Calls / Day Per Tenant</label>
-                <span class="sim-badge" id="sim-badge-calls">10 calls/day</span>
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+                <label style="color: #fff; font-weight: 600;">Calls / Day Per Client</label>
+                <span class="sim-badge" id="sim-badge-calls">5 calls/day</span>
               </div>
-              <input type="range" id="sim-slider-calls" min="1" max="50" value="10" class="sim-range">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px;">
+                <span>Typical reception range</span>
+                <span>PostgreSQL DB Avg: <strong style="color: #38bdf8;">4.9 / day</strong></span>
+              </div>
+              <input type="range" id="sim-slider-calls" min="1" max="30" value="5" step="1" class="sim-range">
             </div>
 
             <div>
-              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px;">
+              <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
                 <label style="color: #fff; font-weight: 600;">Average Call Duration</label>
-                <span class="sim-badge" id="sim-badge-duration">2.0 mins</span>
+                <span class="sim-badge" id="sim-badge-duration">0.8 mins</span>
               </div>
-              <input type="range" id="sim-slider-duration" min="0.5" max="6.0" step="0.5" value="2.0" class="sim-range">
+              <div style="display: flex; justify-content: space-between; font-size: 11px; color: var(--text-dim); margin-bottom: 6px;">
+                <span>Conversational length</span>
+                <span>DB Answered Avg: <strong style="color: #38bdf8;">49.5s (~0.8m)</strong></span>
+              </div>
+              <input type="range" id="sim-slider-duration" min="0.4" max="4.0" step="0.1" value="0.8" class="sim-range">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
               <div>
-                <label style="display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 6px;">Subscription Plan</label>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                  <label style="color: #cbd5e1; font-weight: 600;">SMS Followup Rate</label>
+                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-sms">50%</span>
+                </div>
+                <input type="range" id="sim-slider-sms" min="0" max="100" step="5" value="50" class="sim-range">
+                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">Lead dispatch ($0.0129/msg)</div>
+              </div>
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                  <label style="color: #cbd5e1; font-weight: 600;">Staff Live Forwarding</label>
+                  <span class="sim-badge" style="font-size: 11px; padding: 1px 6px;" id="sim-badge-transfer">5%</span>
+                </div>
+                <input type="range" id="sim-slider-transfer" min="0" max="25" step="1" value="5" class="sim-range">
+                <div style="font-size: 10.5px; color: var(--text-dim); margin-top: 3px;">Outbound &lt;Dial&gt; ($0.0140/m)</div>
+              </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px;">
+              <div>
+                <label style="display: block; font-size: 12.5px; color: #fff; font-weight: 600; margin-bottom: 6px;">Subscription Plan</label>
                 <select id="sim-select-plan" class="input-control" style="background: rgba(0,0,0,0.3); width: 100%;">
-                  <option value="starter">Starter ($49/mo &bull; 150m)</option>
                   <option value="growth" selected>Growth ($150/mo &bull; 450m)</option>
+                  <option value="starter">Starter ($49/mo &bull; 150m)</option>
                   <option value="scale">Scale ($299/mo &bull; 1,000m)</option>
+                  <option value="blended">Blended Portfolio Mix</option>
                 </select>
               </div>
               <div>
-                <label style="display: block; font-size: 13px; color: #fff; font-weight: 600; margin-bottom: 6px;">Infrastructure Tier</label>
+                <label style="display: block; font-size: 12.5px; color: #fff; font-weight: 600; margin-bottom: 6px;">Hosting / Cloud Run</label>
                 <select id="sim-select-infra" class="input-control" style="background: rgba(0,0,0,0.3); width: 100%;">
                   <option value="free" selected>Free Tier ($0/mo)</option>
-                  <option value="pro">Pro Tier ($25/mo)</option>
+                  <option value="pro">Pro Dedicated ($25/mo)</option>
                 </select>
               </div>
             </div>
@@ -340,21 +387,25 @@
           <!-- Outputs Column -->
           <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
             <div>
-              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+              <!-- Hero Financial Output Banner -->
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--border-subtle);">
                 <div>
                   <div style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Simulated Monthly Gross Profit</div>
-                  <div style="font-size: 32px; font-weight: 800; color: #4ade80; margin-top: 2px;" id="sim-out-profit">$0.00</div>
-                  <div style="font-size: 12px; color: #38bdf8; font-weight: 600;" id="sim-out-margin">Gross Margin: 0.0%</div>
+                  <div style="font-size: 34px; font-weight: 800; color: #4ade80; margin-top: 2px; letter-spacing: -0.5px;" id="sim-out-profit">$0.00</div>
+                  <div style="display: flex; gap: 12px; align-items: center; margin-top: 4px;">
+                    <span style="font-size: 12.5px; color: #38bdf8; font-weight: 700;" id="sim-out-margin">Gross Margin: 0.0%</span>
+                    <span style="font-size: 12px; color: #a5b4fc; font-weight: 600;" id="sim-out-profit-client">$0.00 / client / mo</span>
+                  </div>
                 </div>
                 <div style="text-align: right;">
                   <div style="font-size: 11px; text-transform: uppercase; color: var(--text-dim); font-weight: 700;">Simulated MRR</div>
-                  <div style="font-size: 22px; font-weight: 700; color: #fff; margin-top: 2px;" id="sim-out-mrr">$0.00</div>
-                  <div style="font-size: 12px; color: var(--text-muted);" id="sim-out-arr">ARR: $0.00</div>
+                  <div style="font-size: 24px; font-weight: 800; color: #fff; margin-top: 2px;" id="sim-out-mrr">$0.00</div>
+                  <div style="font-size: 12px; color: var(--text-muted); margin-top: 2px;" id="sim-out-arr">ARR: $0.00</div>
                 </div>
               </div>
 
               <!-- Output Metrics Grid -->
-              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
+              <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 14px; padding: 12px; background: rgba(255,255,255,0.02); border-radius: 6px;">
                 <div>
                   <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Calls/Mo</div>
                   <div style="font-size: 14px; font-weight: 700; color: #fff;" id="sim-out-calls">0</div>
@@ -368,8 +419,20 @@
                   <div style="font-size: 14px; font-weight: 700; color: #f87171;" id="sim-out-cogs">$0.00</div>
                 </div>
                 <div>
-                  <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Cost / Min</div>
-                  <div style="font-size: 14px; font-weight: 700; color: #38bdf8;" id="sim-out-cost-min">$0.00</div>
+                  <div style="font-size: 10.5px; color: var(--text-dim); text-transform: uppercase;">Cost / Call</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #38bdf8;" id="sim-out-cost-call">$0.00</div>
+                </div>
+              </div>
+
+              <!-- Granular COGS Breakdown Bar -->
+              <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 10px 12px; border-radius: 6px; margin-bottom: 16px;">
+                <div style="font-size: 10.5px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 6px;">COGS Allocation:</div>
+                <div style="display: flex; justify-content: space-between; font-size: 11px; flex-wrap: wrap; gap: 8px;">
+                  <span>📞 Telephony: <strong style="color: #cbd5e1;" id="sim-cogs-twilio">$0.00</strong></span>
+                  <span>⚡ Gemini AI: <strong style="color: #cbd5e1;" id="sim-cogs-gemini">$0.00</strong></span>
+                  <span>💬 SMS: <strong style="color: #cbd5e1;" id="sim-cogs-sms">$0.00</strong></span>
+                  <span>📱 Numbers: <strong style="color: #cbd5e1;" id="sim-cogs-numbers">$0.00</strong></span>
+                  <span>💳 Stripe: <strong style="color: #cbd5e1;" id="sim-cogs-stripe">$0.00</strong></span>
                 </div>
               </div>
             </div>
