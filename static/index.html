@@ -162,7 +162,7 @@
             <span>Unit Economics</span>
             <span>⚡</span>
           </div>
-          <div class="fin-val" id="fin-cost-min" style="font-size: 21px; color: #38bdf8;">$0.0955 / min</div>
+          <div class="fin-val" id="fin-cost-min" style="font-size: 21px; color: #38bdf8;">$0.0450 / min</div>
           <div class="fin-sub" id="fin-cost-call">$0.00 / call</div>
           <div class="fin-sub" id="fin-avg-duration-sub" style="font-size: 11px; margin-top: 3px; color: var(--text-dim);">Avg duration: 0s</div>
         </div>
@@ -223,51 +223,56 @@
           <div class="cogs-pill">
             <span class="cogs-pill-name">📞 Twilio Voice Inbound</span>
             <span class="cogs-pill-val" id="fin-actual-twilio-voice">$0.00</span>
-            <span class="cogs-pill-rate">$0.0140 / min</span>
+            <span class="cogs-pill-rate" id="rate-twilio-voice">$0.0085 / min</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">🌊 Twilio Media Streams</span>
             <span class="cogs-pill-val" id="fin-actual-twilio-streams">$0.00</span>
-            <span class="cogs-pill-rate">$0.0040 / min</span>
+            <span class="cogs-pill-rate" id="rate-twilio-streams">$0.0040 / min</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">🎙️ Twilio Dual-Recording</span>
             <span class="cogs-pill-val" id="fin-actual-twilio-recording">$0.00</span>
-            <span class="cogs-pill-rate">$0.0025 / min</span>
+            <span class="cogs-pill-rate" id="rate-twilio-recording">$0.0025 / min</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">⚡ Gemini Live Audio</span>
             <span class="cogs-pill-val" id="fin-actual-gemini-live">$0.00</span>
-            <span class="cogs-pill-rate">$0.0750 / min</span>
+            <span class="cogs-pill-rate" id="rate-gemini-live">$0.0300 / min</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">📝 Gemini Transcription</span>
             <span class="cogs-pill-val" id="fin-actual-gemini-transcription">$0.00</span>
-            <span class="cogs-pill-rate">$0.0025 / call</span>
+            <span class="cogs-pill-rate" id="rate-gemini-transcription">$0.0025 / call</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">🔍 Automated QA Audit</span>
             <span class="cogs-pill-val" id="fin-actual-gemini-audit">$0.00</span>
-            <span class="cogs-pill-rate">$0.0008 / call</span>
+            <span class="cogs-pill-rate" id="rate-gemini-audit">$0.0008 / call</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">📱 Dedicated Phone Numbers</span>
             <span class="cogs-pill-val" id="fin-actual-twilio-numbers">$0.00</span>
-            <span class="cogs-pill-rate">$1.15 / mo each</span>
+            <span class="cogs-pill-rate" id="rate-phone-numbers">$1.15 / mo each</span>
           </div>
           <div class="cogs-pill">
             <span class="cogs-pill-name">💳 Stripe Merchant Fees</span>
             <span class="cogs-pill-val" id="fin-actual-stripe-fees">$0.00</span>
-            <span class="cogs-pill-rate">2.9% + $0.30</span>
+            <span class="cogs-pill-rate" id="rate-stripe-fees">2.9% + $0.30</span>
           </div>
         </div>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid var(--border-subtle);">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 14px; border-top: 1px solid var(--border-subtle); flex-wrap: wrap; gap: 12px;">
           <div style="font-size: 13px; color: var(--text-muted);">
             All-Time Cumulative API Burn: <strong style="color: #cbd5e1;" id="fin-lifetime-burn">$0.00</strong>
           </div>
-          <div style="font-size: 16px; font-weight: 700; color: #fff;">
-            Cycle Direct COGS: <span style="color: #f87171;" id="fin-actual-total-cogs">$0.00</span>
+          <div style="display: flex; align-items: center; gap: 18px; font-size: 14px;">
+            <div style="color: var(--text-muted);">
+              Voice &amp; AI Direct: <strong style="color: #38bdf8;" id="fin-actual-voice-ai-subtotal">$0.00</strong>
+            </div>
+            <div style="font-size: 16px; font-weight: 700; color: #fff;">
+              Cycle Direct COGS: <span style="color: #f87171;" id="fin-actual-total-cogs">$0.00</span>
+            </div>
           </div>
         </div>
       </section>

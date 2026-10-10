@@ -127,7 +127,7 @@ async function loadFinancials() {
     if (document.getElementById('fin-margin-pct')) document.getElementById('fin-margin-pct').innerText = `Gross Margin: ${Number(marginPct || 0).toFixed(1)}%`;
 
     const unit = data.unit_economics || {};
-    const costMin = unit.cost_per_minute ?? 0.0955;
+    const costMin = unit.cost_per_minute ?? 0.0450;
     const costCall = unit.avg_cost_per_call ?? unit.cost_per_call ?? 0;
     const avgDuration = unit.avg_call_duration_seconds ?? data.avg_call_duration_seconds ?? 0;
 
@@ -160,6 +160,37 @@ async function loadFinancials() {
     if (document.getElementById('fin-actual-twilio-numbers')) document.getElementById('fin-actual-twilio-numbers').innerText = fmtMoney(cycleCogs.phone_numbers || cycleCogs.twilio_numbers);
     if (document.getElementById('fin-actual-stripe-fees')) document.getElementById('fin-actual-stripe-fees').innerText = fmtMoney(cycleCogs.stripe_fees);
     if (document.getElementById('fin-actual-total-cogs')) document.getElementById('fin-actual-total-cogs').innerText = fmtMoney(totalCogs);
+
+    // Dynamic rate pills & direct Voice + AI subtotal
+    const rates = data.rates || {};
+    if (rates.twilio_voice_per_min && document.getElementById('rate-twilio-voice')) {
+      document.getElementById('rate-twilio-voice').innerText = `$${Number(rates.twilio_voice_per_min).toFixed(4)} / min`;
+    }
+    if (rates.twilio_streams_per_min && document.getElementById('rate-twilio-streams')) {
+      document.getElementById('rate-twilio-streams').innerText = `$${Number(rates.twilio_streams_per_min).toFixed(4)} / min`;
+    }
+    if (rates.twilio_recording_per_min && document.getElementById('rate-twilio-recording')) {
+      document.getElementById('rate-twilio-recording').innerText = `$${Number(rates.twilio_recording_per_min).toFixed(4)} / min`;
+    }
+    if (rates.gemini_live_per_min && document.getElementById('rate-gemini-live')) {
+      document.getElementById('rate-gemini-live').innerText = `$${Number(rates.gemini_live_per_min).toFixed(4)} / min`;
+    }
+    if (rates.gemini_transcription_per_call && document.getElementById('rate-gemini-transcription')) {
+      document.getElementById('rate-gemini-transcription').innerText = `$${Number(rates.gemini_transcription_per_call).toFixed(4)} / call`;
+    }
+    if (rates.gemini_audit_per_call && document.getElementById('rate-gemini-audit')) {
+      document.getElementById('rate-gemini-audit').innerText = `$${Number(rates.gemini_audit_per_call).toFixed(4)} / call`;
+    }
+    if (rates.phone_number_monthly && document.getElementById('rate-phone-numbers')) {
+      document.getElementById('rate-phone-numbers').innerText = `$${Number(rates.phone_number_monthly).toFixed(2)} / mo each`;
+    }
+    if (rates.stripe_fee_pct && document.getElementById('rate-stripe-fees')) {
+      document.getElementById('rate-stripe-fees').innerText = `${(rates.stripe_fee_pct * 100).toFixed(1)}% + $${Number(rates.stripe_fee_fixed).toFixed(2)}`;
+    }
+    if (document.getElementById('fin-actual-voice-ai-subtotal')) {
+      const voiceAiDirect = cycleCogs.direct_voice_ai ?? ((cycleCogs.direct_telephony || 0) + (cycleCogs.direct_ai || 0));
+      document.getElementById('fin-actual-voice-ai-subtotal').innerText = fmtMoney(voiceAiDirect);
+    }
 
     // Cumulative All-Time Reconciliation
     const lifetime = data.lifetime || {};

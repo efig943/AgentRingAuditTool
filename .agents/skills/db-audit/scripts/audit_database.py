@@ -575,21 +575,34 @@ class DatabaseAuditor:
         # D. Expired OAuth Tokens in tenant_integrations
         if not target_table or target_table == "tenant_integrations":
             cur.execute("""
-                SELECT id, tenant_id, provider, calendar_id, expires_at 
+                SELECT id, tenant_id, provider, calendar_id, expires_at,
+                       (refresh_token IS NOT NULL AND length(refresh_token) > 0) AS has_refresh_token
                 FROM tenant_integrations
                 WHERE expires_at < NOW();
             """)
             expired = cur.fetchall()
-            if expired:
-                self.issues.append(
-                    AuditIssue(
-                        code="INT-001",
-                        severity="WARNING",
-                        table="tenant_integrations",
-                        message=f"Found {len(expired)} calendar integration(s) with expired access tokens.",
-                        details={"integrations": [dict(r) for r in expired]},
+            for r in expired:
+                r_dict = dict(r)
+                if not r_dict.get("has_refresh_token"):
+                    self.issues.append(
+                        AuditIssue(
+                            code="INT-001",
+                            severity="ERROR",
+                            table="tenant_integrations",
+                            message=f"Calendar integration #{r_dict['id']} (Tenant #{r_dict['tenant_id']}) has expired access token and NO refresh token. Re-authentication required.",
+                            details={"integration": r_dict},
+                        )
                     )
-                )
+                else:
+                    self.issues.append(
+                        AuditIssue(
+                            code="INT-001",
+                            severity="INFO",
+                            table="tenant_integrations",
+                            message=f"Calendar integration #{r_dict['id']} (Tenant #{r_dict['tenant_id']}) cached access token expired at {r_dict['expires_at']}, but valid refresh token is present (will auto-refresh on demand).",
+                            details={"integration": r_dict},
+                        )
+                    )
 
     # -------------------------------------------------------------------------
     # 5. Cross-Check with Local SQLite audits.db

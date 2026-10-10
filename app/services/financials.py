@@ -12,15 +12,15 @@ logger = logging.getLogger("callAuditAgent.financials")
 
 # Comprehensive Software Service Cost Rates & Pricing Model
 COST_RATES = {
-    # Telephony (Twilio)
-    "twilio_voice_per_min": 0.0140,         # Inbound voice (billed in 60s ceil increments)
+    # Telephony (Twilio US Local Inbound)
+    "twilio_voice_per_min": 0.0085,         # Real Inbound voice (billed in 60s ceil increments)
     "twilio_streams_per_min": 0.0040,       # Bidirectional Media Streams WebSocket (exact duration)
-    "twilio_recording_per_min": 0.0025,     # Dual-channel MP3 call recording
+    "twilio_recording_per_min": 0.0025,     # Dual-channel MP3 call recording (60s ceil)
     "phone_number_monthly": 1.15,           # Dedicated Twilio phone number rental per month
     "sms_cost_per_msg": 0.0129,             # Outbound SMS followup/receipt ($0.0079 + carrier fee)
     
-    # AI Speech & Intelligence (Google Gemini)
-    "gemini_live_per_min": 0.0750,          # Multimodal Live real-time audio WebSocket session
+    # AI Speech & Intelligence (Google Gemini 3.8 Live / Flash)
+    "gemini_live_per_min": 0.0300,          # Multimodal Live real-time audio WebSocket session (tokens + buffer)
     "gemini_transcription_per_call": 0.0025,# Post-call audio transcription & lead extraction (Flash)
     "gemini_audit_per_call": 0.0008,        # Automated support QA audit & DB integrity check (Flash)
     
@@ -418,7 +418,7 @@ def get_financial_summary() -> Dict[str, Any]:
             # Current Cycle Costs for this Tenant
             t_voice_cost = round(p_billed_mins * COST_RATES["twilio_voice_per_min"], 4)
             t_stream_cost = round(p_frac_mins * COST_RATES["twilio_streams_per_min"], 4)
-            t_record_cost = round(p_frac_mins * COST_RATES["twilio_recording_per_min"], 4)
+            t_record_cost = round(p_billed_mins * COST_RATES["twilio_recording_per_min"], 4)
             t_live_cost = round(p_frac_mins * COST_RATES["gemini_live_per_min"], 4)
             t_transcript_cost = round(p_call_count * COST_RATES["gemini_transcription_per_call"], 4)
             t_audit_cost = round(p_call_count * COST_RATES["gemini_audit_per_call"], 4)
@@ -505,11 +505,19 @@ def get_financial_summary() -> Dict[str, Any]:
         all_time_frac_mins = round(all_time_total_seconds / 60.0, 1)
         all_time_voice = round(all_time_total_billed_mins * COST_RATES["twilio_voice_per_min"], 2)
         all_time_streams = round(all_time_frac_mins * COST_RATES["twilio_streams_per_min"], 2)
-        all_time_recording = round(all_time_frac_mins * COST_RATES["twilio_recording_per_min"], 2)
+        all_time_recording = round(all_time_total_billed_mins * COST_RATES["twilio_recording_per_min"], 2)
         all_time_live = round(all_time_frac_mins * COST_RATES["gemini_live_per_min"], 2)
         all_time_transcription = round(all_time_total_calls * COST_RATES["gemini_transcription_per_call"], 2)
         all_time_audit = round(all_time_total_calls * COST_RATES["gemini_audit_per_call"], 3)
-        all_time_numbers = round(phone_count * COST_RATES["phone_number_monthly"] * 4.0, 2) # approx 4 active tenant months
+        
+        # Dynamic active tenant lifespan based on created_at
+        total_tenant_months = 0.0
+        for t in active_tenants:
+            t_created = t.get("created_at") or now
+            tenure_months = max(1.0, (now - t_created).total_seconds() / (30.0 * 86400.0))
+            total_tenant_months += tenure_months
+        avg_tenure = (total_tenant_months / len(active_tenants)) if active_tenants else 1.0
+        all_time_numbers = round(phone_count * COST_RATES["phone_number_monthly"] * avg_tenure, 2)
         
         all_time_api_burn = round(
             all_time_voice + all_time_streams + all_time_recording + 
@@ -524,7 +532,7 @@ def get_financial_summary() -> Dict[str, Any]:
         lifetime_net_profit = round(net_cash_collected - all_time_api_burn, 2)
 
         # Unit Economics (Blended)
-        # Variable rate per minute = Voice ($0.0140) + Streams ($0.0040) + Recording ($0.0025) + Gemini Live ($0.0750) = $0.0955
+        # Variable rate per minute = Voice ($0.0085) + Streams ($0.0040) + Recording ($0.0025) + Gemini Live ($0.0300) = $0.0450
         blended_cogs_per_minute = round(
             COST_RATES["twilio_voice_per_min"] + 
             COST_RATES["twilio_streams_per_min"] + 
@@ -540,12 +548,23 @@ def get_financial_summary() -> Dict[str, Any]:
         )
         avg_call_seconds = round(all_time_total_seconds / float(all_time_total_calls), 1) if all_time_total_calls > 0 else 0.0
         avg_billed_mins_per_call = round(all_time_total_billed_mins / float(all_time_total_calls), 2) if all_time_total_calls > 0 else 0.0
-        avg_cost_per_call = round((avg_billed_mins_per_call * blended_cogs_per_minute) + per_call_fixed_cogs, 4)
+        avg_frac_mins_per_call = round(avg_call_seconds / 60.0, 3)
+
+        # Precise average cost per call:
+        # Whole-minute ceil services: Voice ($0.0085) + Recording ($0.0025)
+        # Fractional exact-duration services: Media Streams ($0.0040) + Gemini Live ($0.0300)
+        ceil_telephony_per_call = avg_billed_mins_per_call * (COST_RATES["twilio_voice_per_min"] + COST_RATES["twilio_recording_per_min"])
+        exact_streaming_per_call = avg_frac_mins_per_call * (COST_RATES["twilio_streams_per_min"] + COST_RATES["gemini_live_per_min"])
+        avg_cost_per_call = round(ceil_telephony_per_call + exact_streaming_per_call + per_call_fixed_cogs, 4)
 
         # Profit Splits on Monthly Gross Profit (50% Founder, 30% Closer, 20% Cold Caller)
         founder_share = round(max(0, period_gross_profit * 0.50), 2)
         sales_closer_share = round(max(0, period_gross_profit * 0.30), 2)
         cold_caller_share = round(max(0, period_gross_profit * 0.20), 2)
+
+        direct_telephony_total = round(cycle_twilio_voice + cycle_twilio_streams + cycle_twilio_recording + cycle_phone_numbers, 2)
+        direct_ai_total = round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2)
+        direct_voice_ai_total = round(direct_telephony_total + direct_ai_total, 2)
 
         monthly_cogs_dict = {
             "twilio_voice": round(cycle_twilio_voice, 2),
@@ -558,6 +577,9 @@ def get_financial_summary() -> Dict[str, Any]:
             "phone_numbers": round(cycle_phone_numbers, 2),
             "stripe_fees": round(cycle_stripe_fees, 2),
             "infrastructure": base_infra,
+            "direct_telephony": direct_telephony_total,
+            "direct_ai": direct_ai_total,
+            "direct_voice_ai": direct_voice_ai_total,
             "total_monthly_cogs": cycle_total_cogs,
             "total_api_cogs": cycle_total_cogs  # legacy alias
         }
@@ -668,7 +690,7 @@ def get_financial_summary() -> Dict[str, Any]:
                     "service_account": google_data.get("service_account"),
                     "billing_account_id": google_data.get("billing_account_id"),
                     "billing_account_name": google_data.get("billing_account_name"),
-                    "method": "Real-time per-second formula ($0.075/min)",
+                    "method": "Real-time per-second token model ($0.0300/min)",
                     "cycle_ai_calculated": round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2),
                     "message": google_data.get("message")
                 }

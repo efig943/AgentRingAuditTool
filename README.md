@@ -166,7 +166,7 @@ You can trigger any audit directly in the Antigravity chat:
 Runs locally at **[http://localhost:5050](http://localhost:5050)** (or `$PORT` on Cloud Run).
 
 - **Live Provider Integration**: Real-time sync of Stripe payments, Twilio voice balances/rates, and GCP project billing.
-- **Unit Economics**: Calculates direct COGS ($0.0955/min blended rate), average call cost, gross margin, and team commission splits.
+- **Unit Economics**: Calculates direct COGS ($0.0450/min calibrated blended rate: Twilio inbound $0.0085 + Media Streams $0.0040 + Recording $0.0025 + Gemini Live audio tokens $0.0300), average call cost (~$0.037/call), gross margin (95.6%), and team commission splits.
 - **Interactive Growth Simulator**: Adjust sliders for clients, call volumes, call durations, and plan tiers (Starter, Growth, Scale).
 - **Per-Tenant Ledger**: Detailed P&L breakdown by business tenant.
 
