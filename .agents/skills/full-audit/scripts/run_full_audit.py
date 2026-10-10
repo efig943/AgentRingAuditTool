@@ -33,6 +33,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 CODE_AUDIT_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "code-audit" / "scripts" / "audit_codebase.py"
 DB_AUDIT_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "db-audit" / "scripts" / "audit_database.py"
+STRIPE_AUDIT_SCRIPT = PROJECT_ROOT / ".agents" / "skills" / "stripe-audit" / "scripts" / "audit_stripe.py"
 
 
 class FullSystemOrchestrator:
@@ -55,14 +56,21 @@ class FullSystemOrchestrator:
             "Database Integrity Audit"
         )
 
-        # 3. Assess Cross-System & Telemetry Status
+        # 3. Run Stripe Financials Audit
+        stripe_results = self._run_sub_audit(
+            [sys.executable, str(STRIPE_AUDIT_SCRIPT), "--format", "json", "--min-severity", min_severity],
+            "Stripe Financials & Reconciliation"
+        )
+
+        # 4. Assess Cross-System & Telemetry Status
         telemetry_summary = self._assess_telemetry(db_results)
 
-        # 4. Synthesize findings
+        # 5. Synthesize findings
         overall_status = "HEALTHY"
         sub_statuses = [
             code_results.get("overall_status", "UNKNOWN"),
-            db_results.get("overall_status", "UNKNOWN")
+            db_results.get("overall_status", "UNKNOWN"),
+            stripe_results.get("overall_status", "UNKNOWN")
         ]
         if "CRITICAL" in sub_statuses:
             overall_status = "CRITICAL"
@@ -72,10 +80,14 @@ class FullSystemOrchestrator:
             overall_status = "WARNING"
 
         # Tally totals
-        total_crit = code_results.get("issue_counts", {}).get("CRITICAL", 0) + db_results.get("issue_counts", {}).get("CRITICAL", 0)
-        total_err = code_results.get("issue_counts", {}).get("ERROR", 0) + db_results.get("issue_counts", {}).get("ERROR", 0)
-        total_warn = code_results.get("issue_counts", {}).get("WARNING", 0) + db_results.get("issue_counts", {}).get("WARNING", 0)
-        total_info = code_results.get("issue_counts", {}).get("INFO", 0) + db_results.get("issue_counts", {}).get("INFO", 0)
+        c_cnt = code_results.get("issue_counts", {})
+        d_cnt = db_results.get("issue_counts", {})
+        s_cnt = stripe_results.get("issue_counts", {})
+
+        total_crit = c_cnt.get("CRITICAL", 0) + d_cnt.get("CRITICAL", 0) + s_cnt.get("CRITICAL", 0)
+        total_err = c_cnt.get("ERROR", 0) + d_cnt.get("ERROR", 0) + s_cnt.get("ERROR", 0)
+        total_warn = c_cnt.get("WARNING", 0) + d_cnt.get("WARNING", 0) + s_cnt.get("WARNING", 0)
+        total_info = c_cnt.get("INFO", 0) + d_cnt.get("INFO", 0) + s_cnt.get("INFO", 0)
 
         self.report = {
             "timestamp": timestamp,
@@ -91,6 +103,7 @@ class FullSystemOrchestrator:
             "domains": {
                 "code_and_deployment": code_results,
                 "database_and_schema": db_results,
+                "stripe_financials": stripe_results,
                 "telemetry_and_calls": telemetry_summary,
             }
         }
@@ -165,6 +178,11 @@ def format_markdown_master_report(report: Dict[str, Any]) -> str:
     db_badge = badges.get(db_res.get("overall_status"), "UNKNOWN")
     lines.append(f"| **Database & Schema** | `db-audit` | {db_badge} | {db_cnt.get('CRITICAL', 0)} | {db_cnt.get('ERROR', 0)} | {db_cnt.get('WARNING', 0)} | {db_cnt.get('INFO', 0)} |")
 
+    stripe_res = report["domains"].get("stripe_financials", {})
+    stripe_cnt = stripe_res.get("issue_counts", {})
+    stripe_badge = badges.get(stripe_res.get("overall_status"), "UNKNOWN")
+    lines.append(f"| **Stripe & Subscriptions** | `stripe-audit` | {stripe_badge} | {stripe_cnt.get('CRITICAL', 0)} | {stripe_cnt.get('ERROR', 0)} | {stripe_cnt.get('WARNING', 0)} | {stripe_cnt.get('INFO', 0)} |")
+
     tele = report["domains"].get("telemetry_and_calls", {})
     lines.append(f"| **Voice AI & Telemetry** | `call-logs` / `gcloud-logs` | ℹ️ TRACKING | 0 | 0 | {tele.get('pending_audits', 0)} pending | {tele.get('coverage_pct')}% coverage |")
     lines.append("")
@@ -172,13 +190,15 @@ def format_markdown_master_report(report: Dict[str, Any]) -> str:
     # Top Priority Action Items
     lines.append("## 2. 🚨 Consolidated High-Priority Blockers")
     p0_items = []
-    # Collect errors and criticals
     for issue in code_res.get("issues", []):
         if issue.get("severity") in ("CRITICAL", "ERROR"):
             p0_items.append((f"[Code] {issue['file']}:{issue.get('line', '')}", issue["message"], issue.get("suggestion")))
     for issue in db_res.get("issues", []):
         if issue.get("severity") in ("CRITICAL", "ERROR"):
             p0_items.append((f"[Database] {issue['table']}", issue["message"], issue.get("remediation_sql")))
+    for issue in stripe_res.get("issues", []):
+        if issue.get("severity") in ("CRITICAL", "ERROR"):
+            p0_items.append((f"[Stripe] {issue['category']}", issue["message"], issue.get("suggestion")))
 
     if not p0_items:
         lines.append("✅ No P0/P1 deployment or integrity blockers detected.")
@@ -209,8 +229,24 @@ def format_markdown_master_report(report: Dict[str, Any]) -> str:
                 lines.append(f"- `[{i['severity']}]` **{i['code']}** ({i['table']}): {i['message']}")
     lines.append("")
 
-    # Domain 3 Breakdown: Telephony & Live Ops
-    lines.append("## 5. 📞 Domain Dissection: Voice Receptionist Telemetry")
+    # Domain 3 Breakdown: Stripe Financials
+    lines.append("## 5. 💳 Domain Dissection: Stripe Financials & Subscriptions")
+    bal = stripe_res.get("balances", {})
+    fin = stripe_res.get("financial_summary", {})
+    lines.append(f"- **Available Cash Balance**: `${bal.get('available_balance', 0.0):,.2f}` {bal.get('currency', 'USD')}")
+    lines.append(f"- **Active SaaS MRR**: `${fin.get('mrr', 0.0):,.2f}`/mo across {fin.get('active_subscription_count', 0)} paying clients")
+    lines.append(f"- **Gross Collections**: `${fin.get('total_gross_collected', 0.0):,.2f}` (Stripe fees: `${fin.get('total_stripe_fees', 0.0):,.2f}`)")
+    rec = stripe_res.get("reconciliation", {})
+    if rec:
+        lines.append(f"- **Database Parity**: {rec.get('reconciled_subscriptions', 0)} subscriptions reconciled (0 entitlement leaks)")
+    if stripe_res.get("issues"):
+        for i in stripe_res["issues"]:
+            if i.get("severity") in ("CRITICAL", "ERROR", "WARNING"):
+                lines.append(f"- `[{i['severity']}]` **{i['code']}** ({i['category']}): {i['message']}")
+    lines.append("")
+
+    # Domain 4 Breakdown: Telephony & Live Ops
+    lines.append("## 6. 📞 Domain Dissection: Voice Receptionist Telemetry")
     lines.append(f"- **Production Database Calls**: `{tele.get('total_calls_in_db')}`")
     lines.append(f"- **Audited Calls in SQLite**: `{tele.get('audited_in_sqlite')}`")
     lines.append(f"- **Audit Backlog**: `{tele.get('pending_audits')}` calls awaiting QA review")
@@ -241,15 +277,17 @@ def format_terminal_summary(report: Dict[str, Any]) -> str:
     lines.append("\nHIGH-PRIORITY ACTION ITEMS (DEPLOYMENT & INTEGRITY BLOCKERS):")
     code_issues = report["domains"].get("code_and_deployment", {}).get("issues", [])
     db_issues = report["domains"].get("database_and_schema", {}).get("issues", [])
+    stripe_issues = report["domains"].get("stripe_financials", {}).get("issues", [])
 
     blockers = [i for i in code_issues if i.get("severity") in ("CRITICAL", "ERROR")] + \
-               [i for i in db_issues if i.get("severity") in ("CRITICAL", "ERROR")]
+               [i for i in db_issues if i.get("severity") in ("CRITICAL", "ERROR")] + \
+               [i for i in stripe_issues if i.get("severity") in ("CRITICAL", "ERROR")]
 
     if not blockers:
         lines.append("  [OK] Zero critical deployment blockers detected.")
     else:
         for b in blockers:
-            target = b.get("file") or b.get("table")
+            target = b.get("file") or b.get("table") or b.get("category")
             loc = f":{b['line']}" if b.get("line") else ""
             lines.append(f"  [!] ({b['code']}) {target}{loc} -> {b['message']}")
             if b.get("suggestion"):

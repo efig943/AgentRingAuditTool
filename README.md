@@ -27,6 +27,11 @@ callAuditAgent/
 │       │   ├── scripts/audit_codebase.py # CLI: AST syntax, secrets, requirements, Cloud Run
 │       │   ├── references/code_rules.md  # Rule taxonomy (SYN, SEC, DEP, ENV, GCP)
 │       │   └── examples/sample_code_audit.md
+│       ├── stripe-audit/                 # Stripe Financials & Subscription Auditor
+│       │   ├── SKILL.md                  # Stripe audit procedures
+│       │   ├── scripts/audit_stripe.py   # CLI: live balances, MRR, fees, DB reconciliation
+│       │   ├── references/stripe_rules.md# Rule taxonomy (BAL, SUB, CHG, REC)
+│       │   └── examples/sample_stripe_audit.md
 │       ├── call-logs/                    # Voice Call Database Records
 │       │   ├── SKILL.md                  # Progressive disclosure call extractor
 │       │   ├── scripts/fetch_call_logs.py# CLI: fetch calls, transcripts, appointments
@@ -123,7 +128,14 @@ python3 .agents/skills/code-audit/scripts/audit_codebase.py --min-severity error
 python3 .agents/skills/code-audit/scripts/audit_codebase.py --path app/services/financials.py
 ```
 
-### 4. `call-logs` & `call-audit-analyzer` (Conversational Voice AI)
+### 4. `stripe-audit` (Live Stripe Balances & Subscription Reconciliation)
+Queries real-time Stripe balances ($3,581.73), active MRR ($300/mo), processing fees, and performs bidirectional reconciliation against PostgreSQL `tenants` to ensure zero entitlement leaks or unmapped subscriptions.
+```bash
+python3 .agents/skills/stripe-audit/scripts/audit_stripe.py --format summary
+python3 .agents/skills/stripe-audit/scripts/audit_stripe.py --format markdown --export stripe_audit.md
+```
+
+### 5. `call-logs` & `call-audit-analyzer` (Conversational Voice AI)
 Extracts turn-by-turn dialogue from PostgreSQL, cross-correlates with Google Cloud Logging telemetry, evaluates customer sentiment, and verifies database appointment fidelity.
 ```bash
 python3 .agents/skills/call-logs/scripts/fetch_call_logs.py --call-id 114 --format summary
