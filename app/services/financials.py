@@ -800,10 +800,11 @@ def simulate_projections(
     twilio_streams = round(total_minutes_month * COST_RATES["twilio_streams_per_min"], 2)
     
     transferred_calls = int(round(total_calls_month * transfer_to_human_pct))
-    transferred_minutes = round(transferred_calls * avg_call_minutes, 1)
+    transferred_minutes = round(transferred_calls * avg_ceil_factor, 1)
     twilio_transfers = round(transferred_minutes * 0.0140, 2)
     twilio_numbers = round(tenants_count * COST_RATES["phone_number_monthly"], 2)
-    total_twilio_cost = round(twilio_voice + twilio_recording + twilio_streams + twilio_transfers + twilio_numbers, 2)
+    twilio_usage = round(twilio_voice + twilio_recording + twilio_streams + twilio_transfers, 2)
+    total_twilio_cost = round(twilio_usage + twilio_numbers, 2)
 
     # 2. AI: Gemini Live + Transcription + Audit
     gemini_live = round(total_minutes_month * COST_RATES["gemini_live_per_min"], 2)
@@ -814,9 +815,8 @@ def simulate_projections(
     # 3. Direct Telephony & AI Cost (before merchant fees & hosting)
     direct_voice_ai_cost = round(total_twilio_cost + total_gemini_cost, 2)
 
-    # 4. Payment Gateway: Stripe merchant fees (2.9% + $0.30 per subscriber)
-    stripe_fee_per_sub = round(monthly_plan_price * COST_RATES["stripe_fee_pct"] + COST_RATES["stripe_fee_fixed"], 2)
-    total_stripe_fees = round(tenants_count * stripe_fee_per_sub, 2)
+    # 4. Payment Gateway: Stripe merchant fees (2.9% on total MRR processed + $0.30 per subscriber charge)
+    total_stripe_fees = round(total_mrr * COST_RATES["stripe_fee_pct"] + (tenants_count * COST_RATES["stripe_fee_fixed"]), 2)
 
     # 5. Infrastructure
     infra_cost = 0.00 if str(infra_tier).lower() == "free" else 25.00
@@ -878,6 +878,7 @@ def simulate_projections(
             "twilio_streams": twilio_streams,
             "twilio_recording": twilio_recording,
             "twilio_transfers": twilio_transfers,
+            "twilio_usage": twilio_usage,
             "twilio_numbers": twilio_numbers,
             "total_twilio": total_twilio_cost,
             "gemini_live": gemini_live,

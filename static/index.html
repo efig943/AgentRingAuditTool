@@ -285,7 +285,7 @@
               <span>🚀</span> Growth &amp; Capacity Financial Simulator
             </h3>
             <p style="font-size: 13px; color: var(--text-muted); margin-top: 3px;">
-              Model SaaS revenue, Twilio/Gemini API spend, lead SMS followups, calendar reminders, peak concurrency, and team payouts.
+              Model SaaS revenue, Twilio/Gemini API spend, staff call transfers, peak concurrency, and team payouts.
             </p>
           </div>
           <div style="display: flex; gap: 10px; align-items: center;">
@@ -418,8 +418,8 @@
                   <div style="font-size: 14px; font-weight: 700; color: #f87171;" id="sim-out-cogs">$0.00</div>
                 </div>
                 <div>
-                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Cost / Call</div>
-                  <div style="font-size: 14px; font-weight: 700; color: #38bdf8;" id="sim-out-cost-call">$0.00</div>
+                  <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">All-in Cost / Call</div>
+                  <div style="font-size: 14px; font-weight: 700; color: #38bdf8;" id="sim-out-cost-call" title="Total COGS / monthly calls">$0.00</div>
                 </div>
               </div>
 
@@ -453,12 +453,13 @@
 
               <!-- Granular COGS Breakdown Bar -->
               <div style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05); padding: 9px 12px; border-radius: 6px; margin-bottom: 14px;">
-                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 5px;">COGS Allocation:</div>
+                <div style="font-size: 10px; text-transform: uppercase; color: var(--text-dim); font-weight: 700; margin-bottom: 5px;">COGS Allocation (Sums to Total COGS):</div>
                 <div style="display: flex; justify-content: space-between; font-size: 11px; flex-wrap: wrap; gap: 8px;">
-                  <span>📞 Telephony: <strong style="color: #cbd5e1;" id="sim-cogs-twilio">$0.00</strong></span>
+                  <span>📞 Telephony Usage: <strong style="color: #cbd5e1;" id="sim-cogs-twilio">$0.00</strong></span>
                   <span>⚡ Gemini AI: <strong style="color: #cbd5e1;" id="sim-cogs-gemini">$0.00</strong></span>
-                  <span>📱 Dedicated Numbers: <strong style="color: #cbd5e1;" id="sim-cogs-numbers">$0.00</strong></span>
+                  <span>📱 Phone Numbers: <strong style="color: #cbd5e1;" id="sim-cogs-numbers">$0.00</strong></span>
                   <span>💳 Stripe Merchant: <strong style="color: #cbd5e1;" id="sim-cogs-stripe">$0.00</strong></span>
+                  <span id="sim-cogs-infra-pill" style="display: none;">🖥️ Hosting: <strong style="color: #cbd5e1;" id="sim-cogs-infra">$0.00</strong></span>
                 </div>
               </div>
             </div>

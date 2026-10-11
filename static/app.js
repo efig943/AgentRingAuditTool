@@ -527,7 +527,10 @@ async function runFinancialSimulation() {
       if (document.getElementById('sim-out-calls')) document.getElementById('sim-out-calls').innerText = fmtInt(vol.monthly_calls);
       if (document.getElementById('sim-out-minutes')) document.getElementById('sim-out-minutes').innerText = `${fmtInt(vol.billed_minutes || vol.monthly_minutes)}m`;
       if (document.getElementById('sim-out-cogs')) document.getElementById('sim-out-cogs').innerText = fmtMoney(costs.total_cogs);
-      if (document.getElementById('sim-out-cost-call')) document.getElementById('sim-out-cost-call').innerText = `$${Number(prof.cost_per_call || 0).toFixed(3)} / call`;
+      if (document.getElementById('sim-out-cost-call')) {
+        document.getElementById('sim-out-cost-call').innerText = `$${Number(prof.cost_per_call || 0).toFixed(3)} / call`;
+        document.getElementById('sim-out-cost-call').title = `All-in COGS: $${Number(prof.cost_per_call || 0).toFixed(4)}/call | Direct Voice & AI: $${Number(prof.voice_ai_cost_per_call || 0).toFixed(4)}/call`;
+      }
 
       // Capacity & Concurrency Sizing
       if (document.getElementById('sim-cap-concurrent')) {
@@ -554,11 +557,33 @@ async function runFinancialSimulation() {
         }
       }
 
-      // Granular COGS Breakdown
-      if (document.getElementById('sim-cogs-twilio')) document.getElementById('sim-cogs-twilio').innerText = fmtMoney(costs.total_twilio);
-      if (document.getElementById('sim-cogs-gemini')) document.getElementById('sim-cogs-gemini').innerText = fmtMoney(costs.total_gemini);
-      if (document.getElementById('sim-cogs-numbers')) document.getElementById('sim-cogs-numbers').innerText = fmtMoney(costs.twilio_numbers);
-      if (document.getElementById('sim-cogs-stripe')) document.getElementById('sim-cogs-stripe').innerText = fmtMoney(costs.stripe_fees);
+      // Granular COGS Breakdown (Sums exactly to Total COGS)
+      const twilioUsageAmt = costs.twilio_usage !== undefined ? costs.twilio_usage : round(costs.total_twilio - (costs.twilio_numbers || 0), 2);
+      if (document.getElementById('sim-cogs-twilio')) {
+        document.getElementById('sim-cogs-twilio').innerText = fmtMoney(twilioUsageAmt);
+        document.getElementById('sim-cogs-twilio').title = `Inbound Voice: ${fmtMoney(costs.twilio_voice)} | Media Streams: ${fmtMoney(costs.twilio_streams)} | Recording: ${fmtMoney(costs.twilio_recording)} | Transfers: ${fmtMoney(costs.twilio_transfers)}`;
+      }
+      if (document.getElementById('sim-cogs-gemini')) {
+        document.getElementById('sim-cogs-gemini').innerText = fmtMoney(costs.total_gemini);
+        document.getElementById('sim-cogs-gemini').title = `Live Audio: ${fmtMoney(costs.gemini_live)} | Transcription: ${fmtMoney(costs.gemini_transcription)} | QA Audit: ${fmtMoney(costs.gemini_audit)}`;
+      }
+      if (document.getElementById('sim-cogs-numbers')) {
+        document.getElementById('sim-cogs-numbers').innerText = fmtMoney(costs.twilio_numbers);
+        document.getElementById('sim-cogs-numbers').title = `$1.15/mo per active tenant (${tenantsCount} numbers)`;
+      }
+      if (document.getElementById('sim-cogs-stripe')) {
+        document.getElementById('sim-cogs-stripe').innerText = fmtMoney(costs.stripe_fees);
+        document.getElementById('sim-cogs-stripe').title = `2.9% on total MRR (${fmtMoney(rev.total_mrr)}) + $0.30 per subscriber charge`;
+      }
+      const infraPill = document.getElementById('sim-cogs-infra-pill');
+      if (infraPill) {
+        if (costs.infrastructure && costs.infrastructure > 0) {
+          infraPill.style.display = 'inline';
+          if (document.getElementById('sim-cogs-infra')) document.getElementById('sim-cogs-infra').innerText = fmtMoney(costs.infrastructure);
+        } else {
+          infraPill.style.display = 'none';
+        }
+      }
 
       // Team splits
       if (document.getElementById('sim-split-founder')) document.getElementById('sim-split-founder').innerText = fmtMoney(splits.founder_50);
