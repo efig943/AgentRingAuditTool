@@ -324,7 +324,7 @@
                 <label style="color: #fff; font-weight: 600;">Active Paying Clients</label>
                 <span class="sim-badge" id="sim-badge-tenants">10 clients</span>
               </div>
-              <input type="range" id="sim-slider-tenants" min="1" max="100" value="10" class="sim-range">
+              <input type="range" id="sim-slider-tenants" min="1" max="100" value="10" class="sim-range range-slider" oninput="updateSimBadge('tenants', this.value); runFinancialSimulation();" onchange="updateSimBadge('tenants', this.value); runFinancialSimulation();">
             </div>
 
             <div>
@@ -336,7 +336,7 @@
                 <span>Typical reception range</span>
                 <span>PostgreSQL DB Avg: <strong style="color: #38bdf8;">4.9 / day</strong></span>
               </div>
-              <input type="range" id="sim-slider-calls" min="1" max="30" value="5.0" step="0.1" class="sim-range">
+              <input type="range" id="sim-slider-calls" min="1" max="30" value="5.0" step="0.1" class="sim-range range-slider" oninput="updateSimBadge('calls', this.value); runFinancialSimulation();" onchange="updateSimBadge('calls', this.value); runFinancialSimulation();">
             </div>
 
             <div>
@@ -348,7 +348,7 @@
                 <span>Conversational length</span>
                 <span>DB Answered Avg: <strong style="color: #38bdf8;">61.7s (~1.0m)</strong></span>
               </div>
-              <input type="range" id="sim-slider-duration" min="0.4" max="4.0" step="0.1" value="1.0" class="sim-range">
+              <input type="range" id="sim-slider-duration" min="0.4" max="4.0" step="0.1" value="1.0" class="sim-range range-slider" oninput="updateSimBadge('duration', this.value); runFinancialSimulation();" onchange="updateSimBadge('duration', this.value); runFinancialSimulation();">
             </div>
 
             <div>
@@ -360,7 +360,7 @@
                 <span>Calls transferred to live human staff</span>
                 <span>Outbound &lt;Dial&gt;: <strong style="color: #38bdf8;">$0.0140/m (DB: 1.0%)</strong></span>
               </div>
-              <input type="range" id="sim-slider-transfer" min="0" max="25" step="1" value="1" class="sim-range">
+              <input type="range" id="sim-slider-transfer" min="0" max="25" step="1" value="1" class="sim-range range-slider" oninput="updateSimBadge('transfer', this.value); runFinancialSimulation();" onchange="updateSimBadge('transfer', this.value); runFinancialSimulation();">
             </div>
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px;">
@@ -566,6 +566,6 @@
   <!-- Toast Notification Container -->
   <div id="toast-container" class="toast-container"></div>
 
-  <script src="/static/app.js?v=20261010_1945"></script>
+  <script src="/static/app.js?v=20261010_2214"></script>
 </body>
 </html>

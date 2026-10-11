@@ -42,37 +42,52 @@ function initEventListeners() {
   const simInfraSelect = document.getElementById('sim-select-infra');
   const simBtnLiveSync = document.getElementById('sim-btn-live-sync');
 
-  if (simTenantsSlider) {
-    simTenantsSlider.addEventListener('input', (e) => {
-      const badge = document.getElementById('sim-badge-tenants');
-      if (badge) badge.innerText = `${e.target.value} clients`;
-      runFinancialSimulation();
-    });
+// Real-time Badge Updater for Simulator Range Sliders
+window.updateSimBadge = function(type, val) {
+  if (type === 'tenants') {
+    const badge = document.getElementById('sim-badge-tenants');
+    if (badge) badge.innerText = `${val} clients`;
+  } else if (type === 'calls') {
+    const badge = document.getElementById('sim-badge-calls');
+    if (badge) badge.innerText = `${parseFloat(val).toFixed(1)} calls/day`;
+  } else if (type === 'duration') {
+    const badge = document.getElementById('sim-badge-duration');
+    if (badge) badge.innerText = `${parseFloat(val).toFixed(1)} mins`;
+  } else if (type === 'transfer') {
+    const badge = document.getElementById('sim-badge-transfer');
+    if (badge) badge.innerText = `${val}%`;
   }
+};
 
-  if (simCallsSlider) {
-    simCallsSlider.addEventListener('input', (e) => {
-      const badge = document.getElementById('sim-badge-calls');
-      if (badge) badge.innerText = `${parseFloat(e.target.value).toFixed(1)} calls/day`;
-      runFinancialSimulation();
-    });
-  }
+  ['input', 'change'].forEach(evt => {
+    if (simTenantsSlider) {
+      simTenantsSlider.addEventListener(evt, (e) => {
+        window.updateSimBadge('tenants', e.target.value);
+        runFinancialSimulation();
+      });
+    }
 
-  if (simDurationSlider) {
-    simDurationSlider.addEventListener('input', (e) => {
-      const badge = document.getElementById('sim-badge-duration');
-      if (badge) badge.innerText = `${parseFloat(e.target.value).toFixed(1)} mins`;
-      runFinancialSimulation();
-    });
-  }
+    if (simCallsSlider) {
+      simCallsSlider.addEventListener(evt, (e) => {
+        window.updateSimBadge('calls', e.target.value);
+        runFinancialSimulation();
+      });
+    }
 
-  if (simTransferSlider) {
-    simTransferSlider.addEventListener('input', (e) => {
-      const badge = document.getElementById('sim-badge-transfer');
-      if (badge) badge.innerText = `${e.target.value}%`;
-      runFinancialSimulation();
-    });
-  }
+    if (simDurationSlider) {
+      simDurationSlider.addEventListener(evt, (e) => {
+        window.updateSimBadge('duration', e.target.value);
+        runFinancialSimulation();
+      });
+    }
+
+    if (simTransferSlider) {
+      simTransferSlider.addEventListener(evt, (e) => {
+        window.updateSimBadge('transfer', e.target.value);
+        runFinancialSimulation();
+      });
+    }
+  });
 
   // Preset Buttons Listener
   document.querySelectorAll('.sim-preset-btn').forEach(btn => {
@@ -466,7 +481,10 @@ async function runFinancialSimulation() {
     const planTier = document.getElementById('sim-select-plan')?.value || 'growth';
     const callsPerDay = parseFloat(document.getElementById('sim-slider-calls')?.value) || 5.0;
     const avgMinutes = parseFloat(document.getElementById('sim-slider-duration')?.value) || 1.0;
-    const transferRate = (parseFloat(document.getElementById('sim-slider-transfer')?.value) || 1) / 100.0;
+    const rawTransfer = document.getElementById('sim-slider-transfer')?.value;
+    const transferRate = (rawTransfer !== undefined && rawTransfer !== null && rawTransfer !== '')
+      ? (parseFloat(rawTransfer) / 100.0)
+      : 0.01;
     const infraTier = document.getElementById('sim-select-infra')?.value || 'free';
 
     try {
