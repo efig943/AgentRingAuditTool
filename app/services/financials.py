@@ -558,10 +558,13 @@ def get_financial_summary() -> Dict[str, Any]:
         exact_streaming_per_call = avg_frac_mins_per_call * (COST_RATES["twilio_streams_per_min"] + COST_RATES["gemini_live_per_min"])
         avg_cost_per_call = round(ceil_telephony_per_call + exact_streaming_per_call + per_call_fixed_cogs, 4)
 
-        # Profit Splits on Monthly Gross Profit (50% Founder, 30% Closer, 20% Cold Caller)
+        # Profit Splits on Monthly Gross Profit (4 People: 50% Founder, remaining 50% split equally among 3 team members = 16.67% each)
         founder_share = round(max(0, period_gross_profit * 0.50), 2)
-        sales_closer_share = round(max(0, period_gross_profit * 0.30), 2)
-        cold_caller_share = round(max(0, period_gross_profit * 0.20), 2)
+        remaining_pool = max(0, round(period_gross_profit - founder_share, 2))
+        partner_base_share = round(remaining_pool / 3.0, 2)
+        partner_1_share = partner_base_share
+        partner_2_share = partner_base_share
+        partner_3_share = max(0, round(remaining_pool - (partner_1_share + partner_2_share), 2))
 
         direct_telephony_total = round(cycle_twilio_voice + cycle_twilio_streams + cycle_twilio_recording + cycle_phone_numbers, 2)
         direct_ai_total = round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2)
@@ -691,11 +694,17 @@ def get_financial_summary() -> Dict[str, Any]:
             "plans": PLAN_TIERS,
             "telemetry_defaults": telemetry_defaults,
             
-            # Team Commission Splits (Monthly P&L)
+            # Team Commission Splits (Monthly P&L - 4 People)
             "profit_splits": {
+                "total_members": 4,
                 "founder_share_50": founder_share,
-                "sales_closer_30": sales_closer_share,
-                "cold_caller_20": cold_caller_share
+                "partner_1_share_16": partner_1_share,
+                "partner_2_share_16": partner_2_share,
+                "partner_3_share_16": partner_3_share,
+                "each_partner_share": partner_base_share,
+                # Backwards-compatible aliases
+                "sales_closer_30": partner_1_share,
+                "cold_caller_20": partner_2_share
             },
             
             # Per-Tenant Performance Ledger
@@ -857,10 +866,13 @@ def simulate_projections(
     else:
         gemini_status = "High Concurrency (Enterprise Quota Needed)"
 
-    # Team Split (50% Founder, 30% Closer, 20% Cold Caller)
+    # Team Split (4 People: 50% Founder, remaining 50% split equally among 3 team members = 16.67% each)
     founder_payout = round(max(0, gross_profit * 0.50), 2)
-    sales_closer_payout = round(max(0, gross_profit * 0.30), 2)
-    cold_caller_payout = round(max(0, gross_profit * 0.20), 2)
+    remaining_sim_pool = max(0, round(gross_profit - founder_payout, 2))
+    partner_sim_base = round(remaining_sim_pool / 3.0, 2)
+    partner_1_sim = partner_sim_base
+    partner_2_sim = partner_sim_base
+    partner_3_sim = max(0, round(remaining_sim_pool - (partner_1_sim + partner_2_sim), 2))
 
     return {
         "inputs": {
@@ -922,9 +934,15 @@ def simulate_projections(
             "bandwidth_mbps": bandwidth_mbps
         },
         "team_splits": {
+            "total_members": 4,
             "founder_50": founder_payout,
-            "sales_closer_30": sales_closer_payout,
-            "cold_caller_20": cold_caller_payout
+            "partner_1_16": partner_1_sim,
+            "partner_2_16": partner_2_sim,
+            "partner_3_16": partner_3_sim,
+            "each_partner": partner_sim_base,
+            # Backwards-compatible aliases
+            "sales_closer_30": partner_1_sim,
+            "cold_caller_20": partner_2_sim
         }
     }
 

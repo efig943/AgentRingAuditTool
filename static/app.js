@@ -284,11 +284,20 @@ async function loadFinancials() {
     if (document.getElementById('fin-founder-share')) {
       document.getElementById('fin-founder-share').innerText = fmtMoney(splits.founder_share_50);
     }
+    if (document.getElementById('sim-split-partner1')) {
+      document.getElementById('sim-split-partner1').innerText = fmtMoney(splits.partner_1_share_16 ?? splits.each_partner_share ?? splits.sales_closer_30);
+    }
     if (document.getElementById('sim-split-closer')) {
-      document.getElementById('sim-split-closer').innerText = fmtMoney(splits.sales_closer_30);
+      document.getElementById('sim-split-closer').innerText = fmtMoney(splits.partner_1_share_16 ?? splits.each_partner_share ?? splits.sales_closer_30);
+    }
+    if (document.getElementById('sim-split-partner2')) {
+      document.getElementById('sim-split-partner2').innerText = fmtMoney(splits.partner_2_share_16 ?? splits.each_partner_share ?? splits.cold_caller_20);
     }
     if (document.getElementById('sim-split-caller')) {
-      document.getElementById('sim-split-caller').innerText = fmtMoney(splits.cold_caller_20);
+      document.getElementById('sim-split-caller').innerText = fmtMoney(splits.partner_2_share_16 ?? splits.each_partner_share ?? splits.cold_caller_20);
+    }
+    if (document.getElementById('sim-split-partner3')) {
+      document.getElementById('sim-split-partner3').innerText = fmtMoney(splits.partner_3_share_16 ?? splits.each_partner_share);
     }
 
     // Actual Database Spend (Current Billing Cycle)
@@ -600,10 +609,13 @@ async function runFinancialSimulation() {
         }
       }
 
-      // Team splits
+      // Team splits (4 Members)
       if (document.getElementById('sim-split-founder')) document.getElementById('sim-split-founder').innerText = fmtMoney(splits.founder_50);
-      if (document.getElementById('sim-out-closer-share')) document.getElementById('sim-out-closer-share').innerText = fmtMoney(splits.sales_closer_30);
-      if (document.getElementById('sim-out-caller-share')) document.getElementById('sim-out-caller-share').innerText = fmtMoney(splits.cold_caller_20);
+      if (document.getElementById('sim-out-partner1-share')) document.getElementById('sim-out-partner1-share').innerText = fmtMoney(splits.partner_1_16 ?? splits.each_partner ?? splits.sales_closer_30);
+      if (document.getElementById('sim-out-closer-share')) document.getElementById('sim-out-closer-share').innerText = fmtMoney(splits.partner_1_16 ?? splits.each_partner ?? splits.sales_closer_30);
+      if (document.getElementById('sim-out-partner2-share')) document.getElementById('sim-out-partner2-share').innerText = fmtMoney(splits.partner_2_16 ?? splits.each_partner ?? splits.cold_caller_20);
+      if (document.getElementById('sim-out-caller-share')) document.getElementById('sim-out-caller-share').innerText = fmtMoney(splits.partner_2_16 ?? splits.each_partner ?? splits.cold_caller_20);
+      if (document.getElementById('sim-out-partner3-share')) document.getElementById('sim-out-partner3-share').innerText = fmtMoney(splits.partner_3_16 ?? splits.each_partner);
 
     } catch (err) {
       console.error('Error running simulation:', err);
