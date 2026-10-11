@@ -704,6 +704,18 @@ def get_financial_summary() -> Dict[str, Any]:
             # Live Twilio Integration
             "twilio": twilio_data,
 
+            # Live Google Integration with Month Billed
+            "google_cloud": {
+                **google_data,
+                "month_billed": cycle_gemini_ai,
+                "month_to_date_total": cycle_gemini_ai,
+                "cycle_ai_breakdown": {
+                    "live_audio": round(cycle_gemini_live, 2),
+                    "transcription": round(cycle_gemini_transcription, 2),
+                    "qa_audit": round(cycle_gemini_audit, 2)
+                }
+            },
+
             # 3-Way Live Reconciliation (Stripe, Twilio, Gemini)
             "reconciliation": {
                 "stripe": {
@@ -728,10 +740,11 @@ def get_financial_summary() -> Dict[str, Any]:
                     "billing_account_name": google_data.get("billing_account_name"),
                     "method": "Real-time per-second token model ($0.0300/min)",
                     "cycle_ai_calculated": round(cycle_gemini_live + cycle_gemini_transcription + cycle_gemini_audit, 2),
+                    "month_billed": cycle_gemini_ai,
+                    "month_to_date_total": cycle_gemini_ai,
                     "message": google_data.get("message")
                 }
-            },
-            "google_cloud": google_data
+            }
         }
     finally:
         conn.close()

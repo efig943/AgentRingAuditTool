@@ -434,6 +434,21 @@ async function loadFinancials() {
       }
     }
 
+    if (document.getElementById('fin-google-month-billed')) {
+      const gBilled = googleCloud.month_billed ?? googleCloud.month_to_date_total ?? data.actual_costs?.direct_ai ?? data.reconciliation?.google?.cycle_ai_calculated ?? 0;
+      const billedEl = document.getElementById('fin-google-month-billed');
+      billedEl.innerText = fmtMoney(gBilled);
+      const bdown = googleCloud.cycle_ai_breakdown;
+      if (bdown) {
+        billedEl.title = `Gemini Live: ${fmtMoney(bdown.live_audio)} | Transcription: ${fmtMoney(bdown.transcription)} | QA Audits: ${fmtMoney(bdown.qa_audit)}`;
+      }
+    }
+
+    if (document.getElementById('fin-google-rate-model')) {
+      const liveRate = data.rates?.gemini_live_per_min ?? 0.030;
+      document.getElementById('fin-google-rate-model').innerText = `$${Number(liveRate).toFixed(3)} / min`;
+    }
+
     // Live Stripe Charges Table
     const stripeTbody = document.getElementById('fin-stripe-table-body');
     if (stripeTbody) {
